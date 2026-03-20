@@ -237,6 +237,10 @@
   ::-webkit-scrollbar{width:4px;}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 
+  .fin-tab{background:var(--bg4);border:1px solid var(--border);color:var(--text-2);border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
+  .fin-tab:hover{color:var(--text);border-color:var(--text-3);}
+  .fin-tab.active{background:var(--red-glow);border-color:var(--border-red);color:var(--red);}
+
   @media(max-width:900px){
     .sidebar{width:60px;}
     .logo-title,.logo-sub,.nav-item span,.nav-badge,.sidebar-footer{display:none;}
@@ -292,7 +296,7 @@
     <div class="nav-item" onclick="showSection('vendedores')"><span class="nav-icon">👥</span><span>Vendedores</span></div>
     <div class="nav-item" onclick="showSection('concesionarios')"><span class="nav-icon">🏢</span><span>Concesionarios</span></div>
     <div class="nav-item" onclick="showSection('productos')"><span class="nav-icon">📦</span><span>Productos</span></div>
-    <div class="nav-item" onclick="showSection('negocio')"><span class="nav-icon">💰</span><span>Análisis Negocio</span></div>
+    <div class="nav-item" onclick="pedirPassword()"><span class="nav-icon">💰</span><span>Análisis Negocio</span><span style="font-size:10px;margin-left:auto">🔒</span></div>
     <div class="nav-item" onclick="showSection('compras')"><span class="nav-icon">🛒</span><span>Compras / Stock</span><span class="nav-badge" id="alertBadge"></span></div>
   </nav>
   <div class="sidebar-footer">
@@ -400,58 +404,128 @@
 
   <!-- NEGOCIO -->
   <div class="section" id="section-negocio">
-    <div class="section-header"><h2>Análisis del Negocio</h2><p>Márgenes reales, costos de productos, logística y rentabilidad</p></div>
-    
-    <div class="kpi-grid" id="negocio-kpis" style="margin-bottom:24px">
-      <div class="kpi-card highlight"><div class="kpi-label">Ventas Totales</div><div class="kpi-value" id="neg-kpi-ventas">—</div></div>
-      <div class="kpi-card"><div class="kpi-label">Costo Estimado Productos</div><div class="kpi-value" id="neg-kpi-costo" style="color:var(--orange)">—</div><div class="kpi-sub">Landed cost (EXW +25% naciona.)</div></div>
-      <div class="kpi-card"><div class="kpi-label">Flete a Nuestro Cargo</div><div class="kpi-value" id="neg-kpi-flete" style="color:var(--orange)">—</div><div class="kpi-sub">Pedidos &gt;$707.500 ARS</div></div>
-      <div class="kpi-card"><div class="kpi-label">Margen Bruto Est.</div><div class="kpi-value" id="neg-kpi-margen" style="color:var(--green)">—</div><div class="kpi-sub">Ventas – costo – flete</div></div>
+    <div class="section-header"><h2>Análisis Financiero</h2><p>Rentabilidad, flujo de caja y capacidad de compra · Solo Gerencia</p></div>
+
+    <!-- TABS -->
+    <div style="display:flex;gap:8px;margin-bottom:24px">
+      <button class="fin-tab active" onclick="showFinTab('rentabilidad',this)">💰 Rentabilidad</button>
+      <button class="fin-tab" onclick="showFinTab('flujocaja',this)">🌊 Flujo de Caja</button>
+      <button class="fin-tab" onclick="showFinTab('capacidad',this)">🛒 Capacidad de Compra</button>
     </div>
 
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Calculadora de Rentabilidad por Mes</div>
-        <div class="cost-grid">
-          <div class="cost-input-wrap"><div class="cost-input-label">Gastos Operativos (mes) $</div><input class="cost-input" type="number" id="costoOp" placeholder="Ej: 3000000"></div>
-          <div class="cost-input-wrap"><div class="cost-input-label">Sueldos y RRHH $</div><input class="cost-input" type="number" id="costoRRHH" placeholder="Ej: 2000000"></div>
-          <div class="cost-input-wrap"><div class="cost-input-label">Gastos Financieros $</div><input class="cost-input" type="number" id="costoFin" placeholder="Ej: 500000"></div>
-          <div class="cost-input-wrap"><div class="cost-input-label">Otros Gastos $</div><input class="cost-input" type="number" id="costoOtros" placeholder="Ej: 300000"></div>
-        </div>
-        <div style="margin-bottom:12px">
-          <div class="cost-input-label" style="margin-bottom:6px">Mes a analizar</div>
-          <select class="cost-input" id="mesAnalisis" style="cursor:pointer"></select>
-        </div>
-        <button class="calc-btn" onclick="calcularNegocio()">Calcular Rentabilidad</button>
-        <div class="result-box" id="resultadoNegocio" style="display:none"></div>
+    <!-- TAB: RENTABILIDAD -->
+    <div id="fin-rentabilidad">
+      <div class="kpi-grid" style="margin-bottom:24px">
+        <div class="kpi-card highlight"><div class="kpi-label">Ventas Totales</div><div class="kpi-value" id="neg-kpi-ventas">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Fee TASA (15%)</div><div class="kpi-value" id="neg-kpi-tasa" style="color:var(--orange)">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Comisión Vendedores (4.3%)</div><div class="kpi-value" id="neg-kpi-comision" style="color:var(--orange)">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Margen Bruto Est.</div><div class="kpi-value" id="neg-kpi-margen" style="color:var(--green)">—</div></div>
       </div>
-      <div class="card">
-        <div class="card-title">Estructura de Costos y Logística</div>
-        <div style="margin-bottom:16px;font-size:13px;color:var(--text-2);line-height:1.7">
-          <div style="background:var(--bg4);border-radius:8px;padding:14px;margin-bottom:12px">
-            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Costo de Productos</div>
-            <div>Precio EXW + <strong style="color:var(--gold-light)">25%</strong> nacionalización = <strong style="color:var(--text)">Landed Cost</strong></div>
-            <div style="font-size:11px;color:var(--text-3);margin-top:4px">Tipo de cambio referencia: $1,415 ARS/USD</div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Calculadora de Rentabilidad por Mes</div>
+          <div class="cost-grid">
+            <div class="cost-input-wrap"><div class="cost-input-label">Gastos Operativos $</div><input class="cost-input" type="number" id="costoOp" placeholder="Ej: 3000000"></div>
+            <div class="cost-input-wrap"><div class="cost-input-label">Sueldos y RRHH $</div><input class="cost-input" type="number" id="costoRRHH" placeholder="Ej: 2000000"></div>
+            <div class="cost-input-wrap"><div class="cost-input-label">Gastos Financieros $</div><input class="cost-input" type="number" id="costoFin" placeholder="Ej: 500000"></div>
+            <div class="cost-input-wrap"><div class="cost-input-label">Otros Gastos $</div><input class="cost-input" type="number" id="costoOtros" placeholder="Ej: 300000"></div>
           </div>
-          <div style="background:var(--bg4);border-radius:8px;padding:14px;margin-bottom:12px">
-            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Política de Envíos</div>
-            <div>Pedidos <strong style="color:var(--green)">&gt; USD 500</strong> (=$707.500 ARS): flete a <strong style="color:var(--red)">nuestro cargo</strong></div>
-            <div>Pedidos &lt; USD 500: flete facturado al <strong style="color:var(--text)">dealer</strong></div>
+          <div style="margin-bottom:12px">
+            <div class="cost-input-label" style="margin-bottom:6px">Mes a analizar</div>
+            <select class="cost-input" id="mesAnalisis" style="cursor:pointer"></select>
           </div>
-          <div style="background:var(--bg4);border-radius:8px;padding:14px">
-            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Transportistas</div>
-            <div><strong style="color:var(--blue)">RED FAIRY</strong> — AMBA: $11.000 base (15kg) + $550/kg extra</div>
-            <div><strong style="color:var(--blue)">RED FAIRY</strong> — Sur ARG: $42.500 base + $2.833/kg extra</div>
-            <div><strong style="color:var(--blue)">RED FAIRY</strong> — Resto: $31.000 base + $1.900/kg extra</div>
-            <div style="margin-top:6px"><strong style="color:var(--gold-light)">ARIAS</strong> — Retiro: $25.500 + Flete: $15.000 (15kg) + $1.000/kg</div>
-            <div style="font-size:11px;color:var(--orange);margin-top:6px">⚠️ Seguro: 0.3% del valor declarado (a confirmar)</div>
+          <button class="calc-btn" onclick="calcularNegocio()">Calcular Rentabilidad</button>
+          <div class="result-box" id="resultadoNegocio" style="display:none"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Estructura de Costos Automáticos</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="background:var(--bg4);border-radius:8px;padding:14px">
+              <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Descuentos sobre ventas (automáticos)</div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--text-2)">Fee TASA</span><span style="color:var(--orange);font-weight:700">15.0%</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-2)">Comisión vendedores</span><span style="color:var(--orange);font-weight:700">4.3%</span></div>
+              <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text)">Total descuentos</span><span style="color:var(--red);font-weight:700">19.3%</span></div>
+            </div>
+            <div style="background:var(--bg4);border-radius:8px;padding:14px">
+              <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Costo de productos</div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--text-2)">Precio EXW</span><span style="color:var(--text-2)">base</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--text-2)">+ Nacionalización</span><span style="color:var(--orange);font-weight:700">+25%</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text)">= Landed Cost</span><span style="color:var(--text);font-weight:700">EXW × 1.25</span></div>
+            </div>
+            <div style="background:var(--bg4);border-radius:8px;padding:14px">
+              <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Política de envíos</div>
+              <div style="font-size:12px;color:var(--text-2)">Pedidos <strong style="color:var(--green)">&gt; USD 500</strong> ($707.500 ARS): flete nuestro<br>Pedidos &lt; USD 500: flete al dealer · TC: $1.415</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-title">Dealer vs Retail por Producto (Top 10)</div>
-      <canvas id="chartMargen" height="120"></canvas>
+
+    <!-- TAB: FLUJO DE CAJA -->
+    <div id="fin-flujocaja" style="display:none">
+      <div style="background:var(--bg4);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;font-size:13px;color:var(--text-2);line-height:1.8">
+        <strong style="color:var(--gold-light)">Condiciones financieras cargadas:</strong><br>
+        🛒 <strong style="color:var(--text)">Compras:</strong> 50% al nacionalizar · 25% a 30 días · 25% a 60 días<br>
+        🏦 <strong style="color:var(--text)">Al nacionalizar también:</strong> 25% gastos de importación (sobre landed cost) + 25% anticipo de impuestos (sobre precio de venta)<br>
+        💵 <strong style="color:var(--text)">Cobro de ventas:</strong> 30 días desde el despacho
+      </div>
+
+      <div class="grid-3" style="margin-bottom:20px">
+        <div class="kpi-card highlight"><div class="kpi-label">Egreso total al nacionalizar</div><div class="kpi-value" id="fc-egreso-nac" style="font-size:24px">—</div><div class="kpi-sub">50% compra + imp. + anticipo fiscal</div></div>
+        <div class="kpi-card"><div class="kpi-label">Cobros a 30 días</div><div class="kpi-value" id="fc-cobro-30" style="color:var(--green);font-size:24px">—</div><div class="kpi-sub">Ventas del mes anterior</div></div>
+        <div class="kpi-card"><div class="kpi-label">Posición neta de caja</div><div class="kpi-value" id="fc-posicion" style="font-size:24px">—</div><div class="kpi-sub">Cobros – egresos período</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title">Flujo de Caja Mensual — Ingresos vs Egresos</div>
+        <canvas id="chartFlujoCaja" height="140"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Desglose Detallado por Mes</div>
+        <table class="data-table">
+          <thead><tr>
+            <th>Mes</th><th>Ventas</th><th>Cobro (+30d)</th>
+            <th>Egreso Nac.</th><th>Anticipo Imp.</th><th>Cuota 30d</th><th>Cuota 60d</th>
+            <th>Fee TASA</th><th>Posición Neta</th>
+          </tr></thead>
+          <tbody id="tablaCashFlow"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: CAPACIDAD DE COMPRA -->
+    <div id="fin-capacidad" style="display:none">
+      <div style="background:var(--bg4);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;font-size:13px;color:var(--text-2);line-height:1.8">
+        <strong style="color:var(--gold-light)">Análisis de autofinanciamiento:</strong> ¿Cuánto podés comprar con lo que ya cobrás de tus propias ventas?
+      </div>
+
+      <div class="kpi-grid" style="margin-bottom:20px">
+        <div class="kpi-card"><div class="kpi-label">Cobros disponibles (mes actual)</div><div class="kpi-value" id="cap-cobros" style="color:var(--green);font-size:22px">—</div><div class="kpi-sub">Ventas del mes anterior a 30d</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Egresos comprometidos</div><div class="kpi-value" id="cap-comprometido" style="font-size:22px">—</div><div class="kpi-sub">Cuotas pendientes + TASA</div></div>
+        <div class="kpi-card"><div class="kpi-label">Capital disponible p/ comprar</div><div class="kpi-value" id="cap-disponible" style="color:var(--gold-light);font-size:22px">—</div><div class="kpi-sub">Cobros – comprometidos</div></div>
+        <div class="kpi-card"><div class="kpi-label">Compra máxima posible</div><div class="kpi-value" id="cap-max-compra" style="color:var(--blue);font-size:22px">—</div><div class="kpi-sub">Cap. disponible ÷ 75% (nac+imp)</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Simulador de Nueva Compra</div>
+          <div style="margin-bottom:16px;font-size:13px;color:var(--text-2)">Ingresá el valor de una compra que estés considerando y ves el impacto en el flujo:</div>
+          <div class="cost-input-wrap" style="margin-bottom:12px">
+            <div class="cost-input-label">Valor EXW de la compra (USD)</div>
+            <input class="cost-input" type="number" id="simCompraUSD" placeholder="Ej: 50000" oninput="simularCompra()">
+          </div>
+          <div class="cost-input-wrap" style="margin-bottom:16px">
+            <div class="cost-input-label">Precio de venta estimado (ARS)</div>
+            <input class="cost-input" type="number" id="simVentaARS" placeholder="Se calcula automático" oninput="simularCompra()">
+          </div>
+          <div class="result-box" id="resultadoSimulacion" style="display:none"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Cronograma de Pagos — Nueva Compra</div>
+          <div id="cronogramaPagos" style="color:var(--text-3);font-size:13px">Ingresá una compra en el simulador para ver el cronograma.</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -475,6 +549,21 @@
       <table class="data-table"><thead><tr><th>#</th><th>Producto</th><th>Total Vendido</th><th>Meses Activo</th><th>Prom/mes</th><th>Stock Sugerido (+30%)</th><th>Prioridad</th></tr></thead>
       <tbody id="tablaStockCompleta"></tbody></table>
     </div>
+  </div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div id="password-modal" style="display:none;position:fixed;inset:0;background:rgba(10,10,15,0.95);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--bg3);border:1px solid var(--border-red);border-radius:16px;padding:36px;max-width:360px;width:90%;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">🔒</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--red);margin-bottom:8px">ÁREA RESTRINGIDA</div>
+    <div style="font-size:13px;color:var(--text-3);margin-bottom:24px">Análisis de Rentabilidad · Solo Gerencia</div>
+    <input id="password-input" type="password" placeholder="Contraseña" 
+      style="width:100%;background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px;text-align:center"
+      onkeydown="if(event.key==='Enter')verificarPassword()">
+    <div id="password-error" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none">Contraseña incorrecta</div>
+    <button onclick="verificarPassword()" style="width:100%;background:var(--red);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:8px">Ingresar</button>
+    <button onclick="cerrarPassword()" style="width:100%;background:transparent;color:var(--text-3);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">Cancelar</button>
   </div>
 </div>
 
@@ -570,6 +659,35 @@ const DEMO_DATA = {
 const fmt = v => '$'+(v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':Math.round(v));
 const fmtFull = v => '$'+Math.round(v).toLocaleString('es-AR');
 Chart.defaults.color='#9090A8'; Chart.defaults.borderColor='rgba(255,255,255,0.06)'; Chart.defaults.font.family='DM Sans';
+
+// ======= PASSWORD =======
+const PASSWORD_HASH = 'rosita';
+let negocioDesbloqueado = false;
+
+function pedirPassword() {
+  if(negocioDesbloqueado) { showSection('negocio'); return; }
+  document.getElementById('password-modal').style.display='flex';
+  document.getElementById('password-input').value='';
+  document.getElementById('password-error').style.display='none';
+  setTimeout(()=>document.getElementById('password-input').focus(), 100);
+}
+
+function verificarPassword() {
+  const val = document.getElementById('password-input').value;
+  if(val === PASSWORD_HASH) {
+    negocioDesbloqueado = true;
+    cerrarPassword();
+    showSection('negocio');
+  } else {
+    document.getElementById('password-error').style.display='block';
+    document.getElementById('password-input').value='';
+    document.getElementById('password-input').focus();
+  }
+}
+
+function cerrarPassword() {
+  document.getElementById('password-modal').style.display='none';
+}
 
 // ======= NAVIGATION =======
 const titles = {resumen:'Resumen General',vendedores:'Performance Vendedores',concesionarios:'Análisis de Concesionarios',productos:'Análisis de Productos',negocio:'Análisis del Negocio',compras:'Compras / Stock'};
@@ -839,11 +957,15 @@ function renderTables(d) {
 
 function renderNegocio(d) {
   const k = d.kpis;
+  const feeTasa = Math.round(k.total_ventas * FEE_TASA);
+  const comision = Math.round(k.total_ventas * COMISION_VEND);
+  const margen = Math.round(k.total_ventas - (k.costo_estimado_total||0) - feeTasa - comision - (k.flete_a_cargo_total||0));
   if(document.getElementById('neg-kpi-ventas')) {
     document.getElementById('neg-kpi-ventas').textContent = fmt(k.total_ventas);
-    document.getElementById('neg-kpi-costo').textContent = k.costo_estimado_total > 0 ? fmt(k.costo_estimado_total) : 'Cargando...';
-    document.getElementById('neg-kpi-flete').textContent = k.flete_a_cargo_total > 0 ? fmt(k.flete_a_cargo_total) : '$0';
-    document.getElementById('neg-kpi-margen').textContent = k.margen_estimado > 0 ? fmt(k.margen_estimado) : '—';
+    document.getElementById('neg-kpi-tasa').textContent = fmt(feeTasa);
+    document.getElementById('neg-kpi-comision').textContent = fmt(comision);
+    document.getElementById('neg-kpi-margen').textContent = fmt(margen);
+    document.getElementById('neg-kpi-margen').style.color = margen >= 0 ? 'var(--green)' : 'var(--red)';
   }
 }
 
@@ -925,32 +1047,247 @@ function calcularNegocio() {
   const cr=parseFloat(document.getElementById('costoRRHH').value)||0;
   const cf=parseFloat(document.getElementById('costoFin').value)||0;
   const cx=parseFloat(document.getElementById('costoOtros').value)||0;
-  
-  // Costo de productos del mes seleccionado (estimado desde los datos)
+
+  // Costos automáticos
   const costosProd = DATA?.kpis?.costo_estimado_total || 0;
   const fletes = DATA?.kpis?.flete_a_cargo_total || 0;
+
+  // Fee TASA 15% sobre ingresos
+  const feeTASA = Math.round(ingresos * 0.15);
+
+  // Comisión vendedores 4.3% sobre ingresos
+  const comisionVendedores = Math.round(ingresos * 0.043);
+
   const otrosCostos = co+cr+cf+cx;
-  const total = costosProd + fletes + otrosCostos;
-  const util = ingresos - total;
+  const totalCostos = costosProd + fletes + feeTASA + comisionVendedores + otrosCostos;
+  const util = ingresos - totalCostos;
   const margen = ingresos>0?(util/ingresos*100).toFixed(1):0;
-  
+
   const el=document.getElementById('resultadoNegocio');
   el.style.display='block';
   el.innerHTML=`
     <div class="result-row"><span class="result-label">📥 Ingresos del mes</span><span class="result-value neu">${fmtFull(ingresos)}</span></div>
-    <div class="result-row"><span class="result-label">🛍️ Costo estimado productos</span><span class="result-value neg">- ${fmtFull(costosProd)}</span></div>
+    <div style="height:1px;background:var(--border);margin:4px 0"></div>
+    <div class="result-row"><span class="result-label">🛍️ Costo productos (landed)</span><span class="result-value neg">- ${fmtFull(costosProd)}</span></div>
     <div class="result-row"><span class="result-label">🚛 Flete a nuestro cargo</span><span class="result-value neg">- ${fmtFull(fletes)}</span></div>
+    <div class="result-row" style="background:rgba(232,0,29,0.05);border-radius:6px;padding:8px 0">
+      <span class="result-label">🏦 Fee TASA <span style="color:var(--text-3);font-size:11px">(15% sobre ventas)</span></span>
+      <span class="result-value neg">- ${fmtFull(feeTASA)}</span>
+    </div>
+    <div class="result-row" style="background:rgba(232,0,29,0.05);border-radius:6px;padding:8px 0">
+      <span class="result-label">👥 Comisión vendedores <span style="color:var(--text-3);font-size:11px">(4.3% sobre ventas)</span></span>
+      <span class="result-value neg">- ${fmtFull(comisionVendedores)}</span>
+    </div>
     <div class="result-row"><span class="result-label">🏢 Gastos operativos</span><span class="result-value neg">- ${fmtFull(co)}</span></div>
     <div class="result-row"><span class="result-label">👥 RRHH y sueldos</span><span class="result-value neg">- ${fmtFull(cr)}</span></div>
     <div class="result-row"><span class="result-label">💳 Gastos financieros</span><span class="result-value neg">- ${fmtFull(cf)}</span></div>
     <div class="result-row"><span class="result-label">📎 Otros gastos</span><span class="result-value neg">- ${fmtFull(cx)}</span></div>
-    <div class="result-row" style="border-top:1px solid var(--border-red)"><span class="result-label" style="font-weight:700;color:var(--text)">💰 Utilidad neta estimada</span><span class="result-value ${util>=0?'pos':'neg'}" style="font-size:18px">${fmtFull(util)}</span></div>
-    <div class="result-row"><span class="result-label">📊 Margen neto</span><span class="result-value ${util>=0?'pos':'neg'}">${margen}%</span></div>
-    ${costosProd===0?'<div style="font-size:12px;color:var(--orange);margin-top:8px">⚠️ El costo de productos se calcula automáticamente desde los códigos del Sheet cuando están mapeados.</div>':''}
+    <div style="height:1px;background:var(--border-red);margin:4px 0"></div>
+    <div class="result-row"><span class="result-label" style="font-weight:700;color:var(--text)">💰 Utilidad neta estimada</span><span class="result-value ${util>=0?'pos':'neg'}" style="font-size:20px">${fmtFull(util)}</span></div>
+    <div class="result-row"><span class="result-label">📊 Margen neto</span><span class="result-value ${util>=0?'pos':'neg'}" style="font-size:16px">${margen}%</span></div>
+    <div style="margin-top:12px;background:var(--bg4);border-radius:8px;padding:12px;font-size:11px;color:var(--text-3)">
+      Fee TASA: ${fmtFull(feeTASA)} · Comisión vendedores: ${fmtFull(comisionVendedores)} · Total descuentos automáticos: ${fmtFull(feeTASA+comisionVendedores)}
+    </div>
+    ${costosProd===0?'<div style="font-size:12px;color:var(--orange);margin-top:8px">⚠️ El costo de productos se calcula desde los códigos del Sheet cuando están mapeados.</div>':''}
   `;
 }
 
-// ======= INIT =======
+// ======= FIN TABS =======
+function showFinTab(id, btn) {
+  ['rentabilidad','flujocaja','capacidad'].forEach(t => {
+    document.getElementById('fin-'+t).style.display = t===id ? 'block' : 'none';
+  });
+  document.querySelectorAll('.fin-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if(id==='flujocaja') renderFlujoCaja();
+  if(id==='capacidad') renderCapacidad();
+}
+
+// ======= CASH FLOW =======
+const TC = 1415;
+const NACIONA_PCT = 0.25;
+// Payment structure
+const PAGO_NAC_PCT = 0.50;       // 50% landed cost al nacionalizar
+const GASTOS_IMP_PCT = 0.25;     // 25% landed cost en gastos importación
+const ANTICIPO_IMP_PCT = 0.25;   // 25% sobre precio de venta
+const CUOTA_30_PCT = 0.25;       // 25% landed a 30 días
+const CUOTA_60_PCT = 0.25;       // 25% landed a 60 días
+const COBRO_DIAS = 30;           // cobro de ventas a 30 días
+const FEE_TASA = 0.15;
+const COMISION_VEND = 0.043;
+const COGS_PCT = 0.35;           // estimación costo/venta cuando no hay dato exacto
+
+function calcCashFlow(d) {
+  const evol = d.evolucion || [];
+  const rows = evol.map((e, i) => {
+    const ventas = e.ventas;
+    const landed = ventas * COGS_PCT;
+    // Egresos al nacionalizar
+    const egresoNac = landed * PAGO_NAC_PCT;
+    const gastosImp = landed * GASTOS_IMP_PCT;
+    const anticipoImp = ventas * ANTICIPO_IMP_PCT;
+    const totalNac = egresoNac + gastosImp + anticipoImp;
+    // Cuotas de mes anterior (si existe)
+    const prevLanded = i > 0 ? evol[i-1].ventas * COGS_PCT : 0;
+    const prevPrevLanded = i > 1 ? evol[i-2].ventas * COGS_PCT : 0;
+    const cuota30 = prevLanded * CUOTA_30_PCT;
+    const cuota60 = prevPrevLanded * CUOTA_60_PCT;
+    // Cobros: ventas del mes anterior a 30 días
+    const cobros = i > 0 ? evol[i-1].ventas : 0;
+    // Fee TASA y comisión (se pagan con las ventas)
+    const feeTasa = ventas * FEE_TASA;
+    const comision = ventas * COMISION_VEND;
+    // Posición neta
+    const totalEgresos = totalNac + cuota30 + cuota60 + feeTasa + comision;
+    const posicion = cobros - totalEgresos;
+    return {
+      mes: e.mes, ventas, landed, cobros,
+      egresoNac, gastosImp, anticipoImp, totalNac,
+      cuota30, cuota60, feeTasa, comision,
+      totalEgresos, posicion
+    };
+  });
+  return rows;
+}
+
+function renderFlujoCaja() {
+  if(!DATA) return;
+  const rows = calcCashFlow(DATA);
+  if(!rows.length) return;
+
+  const last = rows[rows.length-1];
+  document.getElementById('fc-egreso-nac').textContent = fmt(last.totalNac);
+  document.getElementById('fc-cobro-30').textContent = fmt(last.cobros);
+  const pos = last.posicion;
+  const posEl = document.getElementById('fc-posicion');
+  posEl.textContent = fmt(Math.abs(pos));
+  posEl.style.color = pos >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Chart
+  if(charts.flujoCaja) charts.flujoCaja.destroy();
+  charts.flujoCaja = new Chart(document.getElementById('chartFlujoCaja'),{
+    type:'bar',
+    data:{
+      labels: rows.map(r=>r.mes),
+      datasets:[
+        {label:'Cobros',data:rows.map(r=>r.cobros),backgroundColor:'rgba(0,200,122,0.7)',borderRadius:4},
+        {label:'Egresos totales',data:rows.map(r=>r.totalEgresos),backgroundColor:'rgba(232,0,29,0.7)',borderRadius:4},
+        {label:'Posición neta',data:rows.map(r=>r.posicion),type:'line',borderColor:'#F0C040',backgroundColor:'rgba(240,192,64,0.1)',tension:0.4,fill:true,pointRadius:5,pointBackgroundColor:'#F0C040'}
+      ]
+    },
+    options:{plugins:{legend:{position:'top'}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+
+  // Table
+  document.getElementById('tablaCashFlow').innerHTML = rows.map(r => {
+    const color = r.posicion >= 0 ? 'var(--green)' : 'var(--red)';
+    return `<tr>
+      <td class="name">${r.mes}</td>
+      <td>${fmt(r.ventas)}</td>
+      <td style="color:var(--green);font-weight:600">${fmt(r.cobros)}</td>
+      <td style="color:var(--red)">${fmt(r.totalNac)}</td>
+      <td style="color:var(--orange)">${fmt(r.anticipoImp)}</td>
+      <td style="color:var(--orange)">${fmt(r.cuota30)}</td>
+      <td style="color:var(--orange)">${fmt(r.cuota60)}</td>
+      <td style="color:var(--orange)">${fmt(r.feeTasa)}</td>
+      <td style="font-weight:700;color:${color}">${r.posicion>=0?'+':''}${fmt(r.posicion)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCapacidad() {
+  if(!DATA) return;
+  const rows = calcCashFlow(DATA);
+  if(!rows.length) return;
+
+  const evol = DATA.evolucion;
+  const last = rows[rows.length-1];
+  const prev = rows.length > 1 ? rows[rows.length-2] : null;
+
+  // Cobros disponibles = ventas del mes anterior cobradas ahora
+  const cobrosDisp = last.cobros;
+  // Comprometidos = cuotas pendientes de meses anteriores + TASA del mes actual
+  const comprometido = last.cuota30 + last.cuota60 + last.feeTasa + last.comision;
+  const disponible = cobrosDisp - comprometido;
+  // Compra máxima: el egreso al nacionalizar es 75% del landed + 25% del precio venta
+  // disponible = landed*0.75 + venta*0.25 → si asumimos venta = landed/0.35
+  // simplificado: disponible / (0.75 + 0.25/0.35) ≈ disponible / 1.46
+  const maxCompraLanded = Math.max(0, disponible / 1.46);
+  const maxCompraEXW = maxCompraLanded / (1 + NACIONA_PCT);
+  const maxCompraUSD = maxCompraEXW / TC;
+
+  document.getElementById('cap-cobros').textContent = fmt(cobrosDisp);
+  document.getElementById('cap-comprometido').textContent = fmt(comprometido);
+  const dispEl = document.getElementById('cap-disponible');
+  dispEl.textContent = fmt(Math.abs(disponible));
+  dispEl.style.color = disponible >= 0 ? 'var(--gold-light)' : 'var(--red)';
+  document.getElementById('cap-max-compra').textContent = disponible > 0 ? `USD ${Math.round(maxCompraUSD).toLocaleString()}` : '$0';
+}
+
+function simularCompra() {
+  const usd = parseFloat(document.getElementById('simCompraUSD').value) || 0;
+  if(!usd) { document.getElementById('resultadoSimulacion').style.display='none'; return; }
+
+  const exwARS = usd * TC;
+  const landedARS = exwARS * (1 + NACIONA_PCT);
+  // Venta estimada: si no se ingresó, asumimos landed / 0.35 (basado en histórico)
+  const ventaInput = parseFloat(document.getElementById('simVentaARS').value) || 0;
+  const ventaEstimada = ventaInput || (landedARS / COGS_PCT);
+
+  // Egresos al nacionalizar
+  const pagoNac = landedARS * PAGO_NAC_PCT;
+  const gastosImp = landedARS * GASTOS_IMP_PCT;
+  const anticipoImp = ventaEstimada * ANTICIPO_IMP_PCT;
+  const totalNac = pagoNac + gastosImp + anticipoImp;
+  const cuota30 = landedARS * CUOTA_30_PCT;
+  const cuota60 = landedARS * CUOTA_60_PCT;
+
+  // Ingresos al cobrar
+  const cobroVenta = ventaEstimada;
+  const feeTasa = ventaEstimada * FEE_TASA;
+  const comision = ventaEstimada * COMISION_VEND;
+  const ingresoNeto = cobroVenta - feeTasa - comision;
+  const utilidad = ingresoNeto - landedARS;
+
+  document.getElementById('simVentaARS').placeholder = `${fmt(ventaEstimada)} (estimado)`;
+
+  const el = document.getElementById('resultadoSimulacion');
+  el.style.display='block';
+  el.innerHTML=`
+    <div class="result-row"><span class="result-label">💵 Valor EXW</span><span class="result-value neu">USD ${usd.toLocaleString()} = ${fmtFull(exwARS)}</span></div>
+    <div class="result-row"><span class="result-label">📦 Landed Cost (+25%)</span><span class="result-value neu">${fmtFull(landedARS)}</span></div>
+    <div class="result-row"><span class="result-label">💰 Venta estimada</span><span class="result-value pos">${fmtFull(ventaEstimada)}</span></div>
+    <div style="height:1px;background:var(--border);margin:6px 0"></div>
+    <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Egresos</div>
+    <div class="result-row"><span class="result-label">🏦 Al nacionalizar (50%+imp.+anticipo)</span><span class="result-value neg">- ${fmtFull(totalNac)}</span></div>
+    <div class="result-row"><span class="result-label">📅 Cuota 30 días (25%)</span><span class="result-value neg">- ${fmtFull(cuota30)}</span></div>
+    <div class="result-row"><span class="result-label">📅 Cuota 60 días (25%)</span><span class="result-value neg">- ${fmtFull(cuota60)}</span></div>
+    <div class="result-row"><span class="result-label">🏦 Fee TASA + Comisión</span><span class="result-value neg">- ${fmtFull(feeTasa+comision)}</span></div>
+    <div style="height:1px;background:var(--border-red);margin:6px 0"></div>
+    <div class="result-row"><span class="result-label" style="font-weight:700">💰 Utilidad neta</span><span class="result-value ${utilidad>=0?'pos':'neg'}" style="font-size:16px">${fmtFull(utilidad)}</span></div>
+    <div class="result-row"><span class="result-label">📊 Margen sobre venta</span><span class="result-value ${utilidad>=0?'pos':'neg'}">${ventaEstimada>0?(utilidad/ventaEstimada*100).toFixed(1):0}%</span></div>
+  `;
+
+  // Cronograma
+  const hoy = new Date();
+  const m1 = new Date(hoy); m1.setDate(m1.getDate()+30);
+  const m2 = new Date(hoy); m2.setDate(m2.getDate()+60);
+  const cobro = new Date(hoy); cobro.setDate(cobro.getDate()+30);
+  const fmt2 = d => d.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
+
+  document.getElementById('cronogramaPagos').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="alert-item red"><div class="alert-dot red"></div><div class="alert-text"><strong>HOY — Al nacionalizar</strong>${fmtFull(totalNac)}<br><span style="font-size:11px">${fmtFull(pagoNac)} compra + ${fmtFull(gastosImp)} imp. + ${fmtFull(anticipoImp)} anticipo fiscal</span></div></div>
+      <div class="alert-item green"><div class="alert-dot green"></div><div class="alert-text"><strong>${fmt2(cobro)} — Cobro de venta</strong>+ ${fmtFull(cobroVenta)}</div></div>
+      <div class="alert-item orange"><div class="alert-dot orange"></div><div class="alert-text"><strong>${fmt2(m1)} — Cuota 30 días</strong>- ${fmtFull(cuota30)}</div></div>
+      <div class="alert-item orange"><div class="alert-dot orange"></div><div class="alert-text"><strong>${fmt2(m2)} — Cuota 60 días</strong>- ${fmtFull(cuota60)}</div></div>
+      <div style="background:var(--bg4);border-radius:8px;padding:12px;font-size:12px;color:var(--text-2)">
+        <strong style="color:var(--gold-light)">Balance total operación:</strong><br>
+        Cobros: ${fmtFull(cobroVenta)} · Egresos totales: ${fmtFull(totalNac+cuota30+cuota60+feeTasa+comision)}<br>
+        <strong style="${utilidad>=0?'color:var(--green)':'color:var(--red)'}">Resultado neto: ${fmtFull(utilidad)}</strong>
+      </div>
+    </div>`;
+}
 const HARDCODED_URL = 'https://script.google.com/macros/s/AKfycbyIAHbZwVDxJj2qsAXvMt2rglQ-VzZzAi0Wuzan-h0stNax8M-YdY876DKeWDWAi6N-ag/exec';
 
 window.addEventListener('load', ()=>{
