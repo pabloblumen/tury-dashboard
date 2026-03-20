@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TURY | Dashboard Red Toyota</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red:#E8001D; --red-dark:#B0001A; --red-glow:rgba(232,0,29,0.15);
+    --gold:#C9A227; --gold-light:#F0C040;
+    --bg:#0A0A0F; --bg2:#111118; --bg3:#18181F; --bg4:#1E1E28;
+    --border:rgba(255,255,255,0.07); --border-red:rgba(232,0,29,0.3);
+    --text:#F0F0F5; --text-2:#9090A8; --text-3:#5A5A70;
+    --green:#00C87A; --orange:#FF8C00; --blue:#3B82F6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+  /* SETUP OVERLAY */
+  #setup-overlay{
+    position:fixed;inset:0;background:rgba(10,10,15,0.97);z-index:1000;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .setup-box{
+    background:var(--bg3);border:1px solid var(--border-red);border-radius:16px;
+    padding:40px;max-width:560px;width:90%;
+  }
+  .setup-box h2{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--red);margin-bottom:8px;}
+  .setup-box p{font-size:14px;color:var(--text-2);margin-bottom:24px;line-height:1.6;}
+  .setup-steps{margin-bottom:28px;}
+  .setup-step{display:flex;gap:14px;margin-bottom:14px;align-items:flex-start;}
+  .step-num{
+    width:26px;height:26px;border-radius:50%;background:var(--red);
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px;
+  }
+  .step-text{font-size:13px;color:var(--text-2);line-height:1.5;}
+  .step-text strong{color:var(--text);}
+  .url-input{
+    width:100%;background:var(--bg4);border:1px solid var(--border);border-radius:8px;
+    padding:12px 16px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;
+    outline:none;margin-bottom:12px;
+  }
+  .url-input:focus{border-color:var(--red);}
+  .url-input::placeholder{color:var(--text-3);}
+  .btn-connect{
+    background:var(--red);color:#fff;border:none;border-radius:8px;
+    padding:13px 28px;font-size:14px;font-weight:700;cursor:pointer;
+    font-family:'DM Sans',sans-serif;width:100%;transition:background 0.2s;
+  }
+  .btn-connect:hover{background:var(--red-dark);}
+  .btn-demo{
+    background:transparent;color:var(--text-3);border:1px solid var(--border);border-radius:8px;
+    padding:10px 28px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;
+    width:100%;margin-top:10px;transition:all 0.2s;
+  }
+  .btn-demo:hover{color:var(--text);border-color:var(--text-3);}
+  .setup-error{color:var(--red);font-size:12px;margin-top:8px;display:none;}
+
+  /* LOADING */
+  #loading-overlay{
+    position:fixed;inset:0;background:var(--bg);z-index:999;
+    display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;
+  }
+  .spinner{
+    width:40px;height:40px;border:3px solid var(--border);
+    border-top-color:var(--red);border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-size:14px;color:var(--text-2);}
+
+  /* SIDEBAR */
+  .sidebar{
+    position:fixed;left:0;top:0;width:220px;height:100vh;
+    background:var(--bg2);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;z-index:100;
+  }
+  .logo{padding:28px 24px 20px;border-bottom:1px solid var(--border);}
+  .logo-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--red);letter-spacing:2px;line-height:1;}
+  .logo-sub{font-size:10px;color:var(--text-3);letter-spacing:3px;text-transform:uppercase;margin-top:2px;}
+  .nav{padding:20px 0;flex:1;}
+  .nav-item{
+    display:flex;align-items:center;gap:12px;padding:11px 24px;
+    cursor:pointer;color:var(--text-2);font-size:13px;font-weight:500;
+    border-left:3px solid transparent;transition:all 0.2s;
+  }
+  .nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03);}
+  .nav-item.active{color:var(--red);border-left-color:var(--red);background:var(--red-glow);}
+  .nav-icon{font-size:16px;width:18px;text-align:center;}
+  .nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;}
+  .sidebar-footer{padding:16px 24px;border-top:1px solid var(--border);}
+  .update-info{font-size:11px;color:var(--text-3);line-height:1.6;}
+  .update-info span{color:var(--green);font-weight:600;}
+  .btn-refresh{
+    margin-top:8px;background:transparent;border:1px solid var(--border);
+    color:var(--text-3);border-radius:6px;padding:6px 10px;font-size:11px;
+    cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;transition:all 0.2s;
+  }
+  .btn-refresh:hover{border-color:var(--red);color:var(--red);}
+  .btn-disconnect{
+    margin-top:6px;background:transparent;border:none;
+    color:var(--text-3);font-size:10px;cursor:pointer;
+    font-family:'DM Sans',sans-serif;text-decoration:underline;
+  }
+
+  /* MAIN */
+  .main{margin-left:220px;min-height:100vh;}
+  .topbar{
+    height:60px;background:var(--bg2);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 32px;position:sticky;top:0;z-index:50;
+  }
+  .page-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;}
+  .topbar-right{display:flex;align-items:center;gap:12px;}
+  .period-badge{
+    background:var(--bg4);border:1px solid var(--border);border-radius:20px;
+    padding:5px 14px;font-size:12px;color:var(--text-2);
+  }
+  .period-badge strong{color:var(--gold-light);}
+  .live-dot{
+    display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green);
+  }
+  .live-dot::before{
+    content:'';width:7px;height:7px;border-radius:50%;background:var(--green);
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+  /* SECTIONS */
+  .section{display:none;padding:28px 32px;}
+  .section.active{display:block;}
+
+  /* GRID */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;}
+
+  /* CARDS */
+  .card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:20px;transition:border-color 0.2s;}
+  .card:hover{border-color:rgba(255,255,255,0.12);}
+  .card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);margin-bottom:16px;}
+
+  /* KPI */
+  .kpi-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
+  .kpi-card.highlight{border-color:var(--border-red);background:linear-gradient(135deg,#1A0A0E,var(--bg3));}
+  .kpi-label{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+  .kpi-value{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--text);line-height:1;}
+  .kpi-card.highlight .kpi-value{color:var(--red);}
+  .kpi-sub{font-size:12px;color:var(--text-3);margin-top:6px;}
+  .kpi-change{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 8px;border-radius:20px;margin-top:8px;}
+  .kpi-change.up{color:var(--green);background:rgba(0,200,122,0.1);}
+  .kpi-change.down{color:var(--red);background:rgba(232,0,29,0.1);}
+
+  /* TABLE */
+  .data-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .data-table th{text-align:left;padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);border-bottom:1px solid var(--border);font-weight:600;}
+  .data-table td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-2);}
+  .data-table tr:last-child td{border-bottom:none;}
+  .data-table tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
+  .data-table td.name{color:var(--text);font-weight:500;}
+
+  /* BAR */
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .bar-label{font-size:12px;color:var(--text-2);width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:3px;}
+  .bar-val{font-size:12px;color:var(--text-3);min-width:70px;text-align:right;}
+
+  /* ALERTS */
+  .alert-item{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--bg4);border-radius:8px;margin-bottom:8px;border-left:3px solid transparent;}
+  .alert-item.red{border-left-color:var(--red);}
+  .alert-item.orange{border-left-color:var(--orange);}
+  .alert-item.green{border-left-color:var(--green);}
+  .alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .alert-dot.red{background:var(--red);}
+  .alert-dot.orange{background:var(--orange);}
+  .alert-text{flex:1;font-size:13px;color:var(--text-2);}
+  .alert-text strong{color:var(--text);display:block;font-size:12px;}
+  .alert-days{font-size:11px;color:var(--text-3);font-weight:600;}
+
+  /* VENDEDOR */
+  .vendedor-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px;}
+  .vendedor-header{display:flex;align-items:center;gap:16px;}
+  .vendedor-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff;flex-shrink:0;}
+  .v-mat{background:linear-gradient(135deg,#1a3a6e,#2563eb);}
+  .v-her{background:linear-gradient(135deg,#6e1a1a,#dc2626);}
+  .vendedor-name{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;}
+  .vendedor-role{font-size:12px;color:var(--text-3);}
+  .vendedor-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  .v-stat{background:var(--bg4);border-radius:8px;padding:12px;}
+  .v-stat-val{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold-light);}
+  .v-stat-label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+  .assign-note{font-size:12px;color:var(--text-3);background:var(--bg4);padding:10px 14px;border-radius:8px;border-left:3px solid var(--gold);}
+
+  /* NEGOCIO */
+  .cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+  .cost-input-wrap{display:flex;flex-direction:column;gap:6px;}
+  .cost-input-label{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;}
+  .cost-input{background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;width:100%;}
+  .cost-input:focus{border-color:var(--red);}
+  .calc-btn{background:var(--red);color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background 0.2s;}
+  .calc-btn:hover{background:var(--red-dark);}
+  .result-box{background:linear-gradient(135deg,#1A0A0E,var(--bg4));border:1px solid var(--border-red);border-radius:12px;padding:20px;margin-top:16px;}
+  .result-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
+  .result-row:last-child{border-bottom:none;}
+  .result-label{font-size:13px;color:var(--text-2);}
+  .result-value{font-size:14px;font-weight:700;}
+  .result-value.pos{color:var(--green);}
+  .result-value.neg{color:var(--red);}
+  .result-value.neu{color:var(--text);}
+
+  /* STOCK */
+  .stock-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .stock-row:last-child{border-bottom:none;}
+  .stock-prod{flex:1;font-size:12px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .stock-vel{font-size:12px;font-weight:700;color:var(--gold-light);min-width:60px;text-align:center;}
+  .stock-label{font-size:10px;color:var(--text-3);}
+  .stock-proj{font-size:12px;color:var(--green);min-width:80px;text-align:right;font-weight:600;}
+
+  /* PROGRESS */
+  .progress-track{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin-top:4px;}
+  .progress-fill{height:100%;border-radius:4px;}
+
+  /* TAGS */
+  .tag{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+  .tag-red{background:rgba(232,0,29,0.15);color:var(--red);}
+  .tag-green{background:rgba(0,200,122,0.15);color:var(--green);}
+  .tag-orange{background:rgba(255,140,0,0.15);color:var(--orange);}
+  .tag-blue{background:rgba(59,130,246,0.15);color:var(--blue);}
+
+  .section-header{margin-bottom:24px;}
+  .section-header h2{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;}
+  .section-header p{font-size:13px;color:var(--text-3);margin-top:4px;}
+
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+  @media(max-width:900px){
+    .sidebar{width:60px;}
+    .logo-title,.logo-sub,.nav-item span,.nav-badge,.sidebar-footer{display:none;}
+    .main{margin-left:60px;}
+    .kpi-grid{grid-template-columns:1fr 1fr;}
+    .grid-2,.grid-3{grid-template-columns:1fr;}
+    .section{padding:16px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- SETUP OVERLAY -->
+<div id="setup-overlay">
+  <div class="setup-box">
+    <h2>Conectar Google Sheets</h2>
+    <p>Pegá la URL de tu Web App de Apps Script para conectar el dashboard en tiempo real con tus datos de pedidos.</p>
+    <div class="setup-steps">
+      <div class="setup-step">
+        <div class="step-num">1</div>
+        <div class="step-text">En tu Google Sheet: <strong>Extensiones → Apps Script</strong>, pegá el código del archivo <code>TURY_AppsScript.gs</code></div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Hacé clic en <strong>Implementar → Nueva implementación</strong>, tipo: <strong>Aplicación web</strong>, acceso: <strong>Cualquier persona</strong></div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Copiá la <strong>URL de la aplicación web</strong> que te genera Google y pegala abajo</div>
+      </div>
+    </div>
+    <input class="url-input" id="urlInput" type="text" placeholder="https://script.google.com/macros/s/AKfy.../exec">
+    <div class="setup-error" id="setupError">No se pudo conectar. Verificá la URL e intentá de nuevo.</div>
+    <button class="btn-connect" onclick="conectar()">🔗 Conectar Dashboard</button>
+    <button class="btn-demo" onclick="usarDemoData()">Ver demo con datos de ejemplo</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Cargando datos desde Google Sheets...</div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-title">TURY</div>
+    <div class="logo-sub">Red Toyota</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" onclick="showSection('resumen')"><span class="nav-icon">📊</span><span>Resumen General</span></div>
+    <div class="nav-item" onclick="showSection('vendedores')"><span class="nav-icon">👥</span><span>Vendedores</span></div>
+    <div class="nav-item" onclick="showSection('concesionarios')"><span class="nav-icon">🏢</span><span>Concesionarios</span></div>
+    <div class="nav-item" onclick="showSection('productos')"><span class="nav-icon">📦</span><span>Productos</span></div>
+    <div class="nav-item" onclick="showSection('negocio')"><span class="nav-icon">💰</span><span>Análisis Negocio</span></div>
+    <div class="nav-item" onclick="showSection('compras')"><span class="nav-icon">🛒</span><span>Compras / Stock</span><span class="nav-badge" id="alertBadge"></span></div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="update-info">
+      Actualizado: <span id="lastUpdate">—</span><br>
+      <span id="sourceLabel" style="color:var(--text-3)">demo</span>
+    </div>
+    <button class="btn-refresh" onclick="refreshData()">↻ Actualizar datos</button>
+    <button class="btn-disconnect" onclick="desconectar()">Cambiar conexión</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Resumen General</div>
+    <div class="topbar-right">
+      <div class="live-dot" id="liveDot" style="display:none">EN VIVO</div>
+      <div class="period-badge">Período: <strong id="periodLabel">—</strong></div>
+    </div>
+  </div>
+
+  <!-- RESUMEN -->
+  <div class="section active" id="section-resumen">
+    <div class="section-header"><h2>Resumen General</h2><p id="resumen-subtitle">Cargando...</p></div>
+    <div class="kpi-grid">
+      <div class="kpi-card highlight"><div class="kpi-label">Ventas Totales</div><div class="kpi-value" id="kpi-ventas">—</div><div class="kpi-sub" id="kpi-ventas-sub">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Unidades Vendidas</div><div class="kpi-value" id="kpi-unidades">—</div><div class="kpi-sub">Productos despachados</div></div>
+      <div class="kpi-card"><div class="kpi-label">Concesionarios Activos</div><div class="kpi-value" id="kpi-conc">—</div><div class="kpi-sub">De la Red Toyota</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ticket Promedio / Orden</div><div class="kpi-value" id="kpi-ticket">—</div><div class="kpi-sub">Por pedido procesado</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">Evolución Mensual — Ventas ($)</div><canvas id="chartEvolucionVentas" height="160"></canvas></div>
+      <div class="card"><div class="card-title">Evolución Mensual — Unidades</div><canvas id="chartEvolucionUnidades" height="160"></canvas></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">Top Concesionarios por Venta</div><div id="barConc"></div></div>
+      <div class="card"><div class="card-title">Top Productos por Venta</div><div id="barProd"></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">Mes Actual vs Anterior</div><div id="mesComparacion"></div></div>
+      <div class="card"><div class="card-title">Distribución por Mes</div><canvas id="chartPie" height="160"></canvas></div>
+    </div>
+  </div>
+
+  <!-- VENDEDORES -->
+  <div class="section" id="section-vendedores">
+    <div class="section-header"><h2>Performance de Vendedores</h2><p>Matías y Hernán · Red Toyota Argentina</p></div>
+    <div class="grid-2" id="vendedores-cards"></div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-title">Evolución Ventas por Vendedor</div>
+        <canvas id="chartVendMensual" height="160"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Participación en Ventas Totales</div>
+        <canvas id="chartVendPie" height="160"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Concesionarios por Vendedor y Actividad Reciente</div>
+      <table class="data-table"><thead><tr><th>#</th><th>Concesionario</th><th>Vendedor</th><th>Última Compra</th><th>Días sin actividad</th><th>Estado</th></tr></thead>
+      <tbody id="tablaConcVend"></tbody></table>
+    </div>
+  </div>
+
+  <!-- CONCESIONARIOS -->
+  <div class="section" id="section-concesionarios">
+    <div class="section-header"><h2>Análisis de Concesionarios</h2><p id="conc-subtitle">—</p></div>
+    <div class="grid-3">
+      <div class="kpi-card"><div class="kpi-label">Total</div><div class="kpi-value" id="kpi-conc2">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Activos (mes actual)</div><div class="kpi-value" style="color:var(--green)" id="kpi-conc-activos">—</div></div>
+      <div class="kpi-card highlight"><div class="kpi-label">Requieren contacto</div><div class="kpi-value" id="kpi-conc-urgente">—</div><div class="kpi-sub">+25 días sin comprar</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Ranking Completo</div>
+      <table class="data-table"><thead><tr><th>#</th><th>Concesionario</th><th>Ventas Totales</th><th>Unidades</th><th>Órdenes</th><th>Última Compra</th><th>Estado</th></tr></thead>
+      <tbody id="tablaConc"></tbody></table>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">🚨 A Reactivar (+14 días)</div><div id="alertasConc"></div></div>
+      <div class="card"><div class="card-title">Top 10 por Volumen</div><canvas id="chartTopConc" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <!-- PRODUCTOS -->
+  <div class="section" id="section-productos">
+    <div class="section-header"><h2>Análisis de Productos</h2><p id="prod-subtitle">—</p></div>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">En catálogo</div><div class="kpi-value" id="kpi-prods">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Con venta este mes</div><div class="kpi-value" style="color:var(--green)" id="kpi-prods-activos">—</div></div>
+      <div class="kpi-card highlight"><div class="kpi-label">Sin movimiento +20d</div><div class="kpi-value" id="kpi-sin-mov">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Top producto</div><div class="kpi-value" style="font-size:16px;color:var(--gold-light)" id="kpi-top-prod">—</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">Top 10 por Importe</div><canvas id="chartTopProd" height="220"></canvas></div>
+      <div class="card"><div class="card-title">🚨 Sin Movimiento (+15 días)</div><div id="alertasProd" style="max-height:280px;overflow-y:auto"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Ranking Completo</div>
+      <table class="data-table"><thead><tr><th>#</th><th>Producto</th><th>Importe Total</th><th>Unidades</th><th>Última Venta</th><th>Vel. mensual</th></tr></thead>
+      <tbody id="tablaProductos"></tbody></table>
+    </div>
+  </div>
+
+  <!-- NEGOCIO -->
+  <div class="section" id="section-negocio">
+    <div class="section-header"><h2>Análisis del Negocio</h2><p>Márgenes reales, costos de productos, logística y rentabilidad</p></div>
+    
+    <div class="kpi-grid" id="negocio-kpis" style="margin-bottom:24px">
+      <div class="kpi-card highlight"><div class="kpi-label">Ventas Totales</div><div class="kpi-value" id="neg-kpi-ventas">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Costo Estimado Productos</div><div class="kpi-value" id="neg-kpi-costo" style="color:var(--orange)">—</div><div class="kpi-sub">Landed cost (EXW +25% naciona.)</div></div>
+      <div class="kpi-card"><div class="kpi-label">Flete a Nuestro Cargo</div><div class="kpi-value" id="neg-kpi-flete" style="color:var(--orange)">—</div><div class="kpi-sub">Pedidos &gt;$707.500 ARS</div></div>
+      <div class="kpi-card"><div class="kpi-label">Margen Bruto Est.</div><div class="kpi-value" id="neg-kpi-margen" style="color:var(--green)">—</div><div class="kpi-sub">Ventas – costo – flete</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Calculadora de Rentabilidad por Mes</div>
+        <div class="cost-grid">
+          <div class="cost-input-wrap"><div class="cost-input-label">Gastos Operativos (mes) $</div><input class="cost-input" type="number" id="costoOp" placeholder="Ej: 3000000"></div>
+          <div class="cost-input-wrap"><div class="cost-input-label">Sueldos y RRHH $</div><input class="cost-input" type="number" id="costoRRHH" placeholder="Ej: 2000000"></div>
+          <div class="cost-input-wrap"><div class="cost-input-label">Gastos Financieros $</div><input class="cost-input" type="number" id="costoFin" placeholder="Ej: 500000"></div>
+          <div class="cost-input-wrap"><div class="cost-input-label">Otros Gastos $</div><input class="cost-input" type="number" id="costoOtros" placeholder="Ej: 300000"></div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div class="cost-input-label" style="margin-bottom:6px">Mes a analizar</div>
+          <select class="cost-input" id="mesAnalisis" style="cursor:pointer"></select>
+        </div>
+        <button class="calc-btn" onclick="calcularNegocio()">Calcular Rentabilidad</button>
+        <div class="result-box" id="resultadoNegocio" style="display:none"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Estructura de Costos y Logística</div>
+        <div style="margin-bottom:16px;font-size:13px;color:var(--text-2);line-height:1.7">
+          <div style="background:var(--bg4);border-radius:8px;padding:14px;margin-bottom:12px">
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Costo de Productos</div>
+            <div>Precio EXW + <strong style="color:var(--gold-light)">25%</strong> nacionalización = <strong style="color:var(--text)">Landed Cost</strong></div>
+            <div style="font-size:11px;color:var(--text-3);margin-top:4px">Tipo de cambio referencia: $1,415 ARS/USD</div>
+          </div>
+          <div style="background:var(--bg4);border-radius:8px;padding:14px;margin-bottom:12px">
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Política de Envíos</div>
+            <div>Pedidos <strong style="color:var(--green)">&gt; USD 500</strong> (=$707.500 ARS): flete a <strong style="color:var(--red)">nuestro cargo</strong></div>
+            <div>Pedidos &lt; USD 500: flete facturado al <strong style="color:var(--text)">dealer</strong></div>
+          </div>
+          <div style="background:var(--bg4);border-radius:8px;padding:14px">
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Transportistas</div>
+            <div><strong style="color:var(--blue)">RED FAIRY</strong> — AMBA: $11.000 base (15kg) + $550/kg extra</div>
+            <div><strong style="color:var(--blue)">RED FAIRY</strong> — Sur ARG: $42.500 base + $2.833/kg extra</div>
+            <div><strong style="color:var(--blue)">RED FAIRY</strong> — Resto: $31.000 base + $1.900/kg extra</div>
+            <div style="margin-top:6px"><strong style="color:var(--gold-light)">ARIAS</strong> — Retiro: $25.500 + Flete: $15.000 (15kg) + $1.000/kg</div>
+            <div style="font-size:11px;color:var(--orange);margin-top:6px">⚠️ Seguro: 0.3% del valor declarado (a confirmar)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Dealer vs Retail por Producto (Top 10)</div>
+      <canvas id="chartMargen" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- COMPRAS -->
+  <div class="section" id="section-compras">
+    <div class="section-header"><h2>Compras y Proyección de Stock</h2><p>Velocidad de demanda y reorden · basado en historial acumulado</p></div>
+    <div class="grid-3">
+      <div class="kpi-card highlight"><div class="kpi-label">Alta rotación (+10/mes)</div><div class="kpi-value" id="kpi-alta-rot">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Proyección próximo mes</div><div class="kpi-value" style="color:var(--gold-light)" id="kpi-proj">—</div><div class="kpi-sub">uds estimadas</div></div>
+      <div class="kpi-card"><div class="kpi-label">Productos activos</div><div class="kpi-value" id="kpi-prods2">—</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">Velocidad de Demanda (uds/mes)</div><canvas id="chartVelocidad" height="200"></canvas></div>
+      <div class="card"><div class="card-title">🗓️ Proyección Próximo Mes</div>
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:12px">Stock sugerido = promedio mensual × 1.3 (colchón 30%)</div>
+        <div id="tablaStock" style="max-height:300px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tabla Completa — Velocidad y Reorden</div>
+      <table class="data-table"><thead><tr><th>#</th><th>Producto</th><th>Total Vendido</th><th>Meses Activo</th><th>Prom/mes</th><th>Stock Sugerido (+30%)</th><th>Prioridad</th></tr></thead>
+      <tbody id="tablaStockCompleta"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ======= CONFIG =======
+const STORAGE_KEY = 'tury_script_url';
+let DATA = null;
+let charts = {};
+let isLive = false;
+
+// ======= DEMO DATA =======
+const DEMO_DATA = {
+  generado: new Date().toISOString(),
+  kpis:{total_ventas:133226094,total_unidades:537,total_concesionarios:23,total_productos:34,ticket_promedio:516380,mes_actual_ventas:38040518,mes_actual_unidades:168,mes_actual_label:"2026-03",mes_anterior_ventas:75811532,mes_anterior_unidades:319,costo_estimado_total:42000000,flete_a_cargo_total:1850000,margen_estimado:89376094},
+  evolucion:[{mes:"2026-01",ventas:19374044,unidades:50},{mes:"2026-02",ventas:75811532,unidades:319},{mes:"2026-03",ventas:38040518,unidades:168}],
+  topConc:[
+    {nombre:"Autos del Sur S.A.",importe:26457440,unidades:133,ordenes:54,ultima:"2026-03-06"},
+    {nombre:"Autonort S.A.",importe:17869485,unidades:43,ordenes:14,ultima:"2026-03-17"},
+    {nombre:"Nippon Car S.R.L.",importe:12924214,unidades:29,ordenes:10,ultima:"2026-03-16"},
+    {nombre:"Zento S.A.",importe:8703014,unidades:26,ordenes:5,ultima:"2026-03-11"},
+    {nombre:"Yacopini Inversora S.A.",importe:8388384,unidades:36,ordenes:18,ultima:"2026-02-09"},
+    {nombre:"Haimovich Parana S.A.",importe:7784634,unidades:42,ordenes:19,ultima:"2026-02-23"},
+    {nombre:"Autolux S.A.",importe:7641617,unidades:28,ordenes:14,ultima:"2026-03-17"},
+    {nombre:"Kansai S.A.",importe:7314184,unidades:50,ordenes:16,ultima:"2026-03-09"},
+    {nombre:"Amiun S.A.",importe:6101792,unidades:30,ordenes:28,ultima:"2026-03-13"},
+    {nombre:"AUTORA SA",importe:5418081,unidades:28,ordenes:15,ultima:"2026-03-17"},
+  ],
+  topProd:[
+    {nombre:"Kit combo inicial",importe:29221859,unidades:8,ordenes:7,ultima:"2026-02-25"},
+    {nombre:"KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux CS)",importe:16139154,unidades:23,ordenes:16,ultima:"2026-03-17"},
+    {nombre:"CAMARAS LATERALES + 3 AV inputs",importe:13656357,unidades:39,ordenes:29,ultima:"2026-03-19"},
+    {nombre:"AUTOMACIÓN VIDRIOS + PLEG. ESPEJOS",importe:11449847,unidades:47,ordenes:20,ultima:"2026-03-16"},
+    {nombre:"Estribo Hilux CS 2016-2026",importe:9065991,unidades:26,ordenes:18,ultima:"2026-03-17"},
+    {nombre:"ALARMA KEYLESS",importe:5946922,unidades:66,ordenes:21,ultima:"2026-03-18"},
+    {nombre:"CARGADOR USB-C (Yaris)",importe:5894961,unidades:35,ordenes:8,ultima:"2026-03-04"},
+    {nombre:"CARGADOR USB-C (Hilux DC MT)",importe:4715969,unidades:28,ordenes:8,ultima:"2026-03-04"},
+    {nombre:"AUTOMACIÓN VIDRIOS (Hilux, SW4, Yaris)",importe:4484053,unidades:23,ordenes:8,ultima:"2026-03-17"},
+    {nombre:"ALARMA SONORA MARCHA ATRÁS",importe:4267829,unidades:35,ordenes:8,ultima:"2026-03-03"},
+  ],
+  sinMovimiento:[
+    {nombre:"AUTOMACIÓN VIDRIOS (Etios 2015-2023)",ultima:"2026-02-03",dias:45},
+    {nombre:"AUTOMACIÓN VIDRIOS (Yaris 2018-2026)",ultima:"2026-02-03",dias:45},
+    {nombre:"CAMARA DELANTERA (SW4)",ultima:"2026-02-10",dias:38},
+    {nombre:"MÓDULO TECHO SOLAR",ultima:"2026-02-12",dias:36},
+    {nombre:"KIT LEDS PORTA VASOS",ultima:"2026-02-12",dias:36},
+    {nombre:"MÓDULO PLEGAMIENTO ESPEJOS",ultima:"2026-02-20",dias:28},
+    {nombre:"KIT LEDS ALFOMBRA",ultima:"2026-02-23",dias:25},
+    {nombre:"KIT LED MANIJAS",ultima:"2026-02-23",dias:25},
+    {nombre:"CARGADOR USB-C (Corolla)",ultima:"2026-02-24",dias:24},
+  ],
+  recency:[
+    {concesionario:"TM S.A.",ultima_compra:"2026-01-22",dias_sin_compra:57},
+    {concesionario:"Alem Sur S.A.",ultima_compra:"2026-01-27",dias_sin_compra:52},
+    {concesionario:"Yacopini Inversora S.A.",ultima_compra:"2026-02-09",dias_sin_compra:39},
+    {concesionario:"Del Parque S.A.",ultima_compra:"2026-02-18",dias_sin_compra:30},
+    {concesionario:"Haimovich Parana S.A.",ultima_compra:"2026-02-23",dias_sin_compra:25},
+    {concesionario:"Asahi Motors S.A.",ultima_compra:"2026-02-25",dias_sin_compra:23},
+    {concesionario:"Pichetti S.A.",ultima_compra:"2026-03-02",dias_sin_compra:18},
+    {concesionario:"Kansai S.A.",ultima_compra:"2026-03-09",dias_sin_compra:11},
+    {concesionario:"Autonort S.A.",ultima_compra:"2026-03-17",dias_sin_compra:3},
+    {concesionario:"AUTO PRANA S.A.",ultima_compra:"2026-03-19",dias_sin_compra:1},
+  ],
+  vendedores:[
+    {vendedor:'Matias',ventas:61200000,unidades:220,ordenes:95,concesionarios_activos:12,margen:8500000,ultima:'2026-03-19'},
+    {vendedor:'Hernan',ventas:72026094,unidades:317,ordenes:163,concesionarios_activos:11,margen:10200000,ultima:'2026-03-17'}
+  ],
+  mensual_por_vendedor:[
+    {mes:'2026-01',vendedor:'Matias',ventas:9200000,unidades:24},
+    {mes:'2026-01',vendedor:'Hernan',ventas:10174044,unidades:26},
+    {mes:'2026-02',vendedor:'Matias',ventas:28500000,unidades:120},
+    {mes:'2026-02',vendedor:'Hernan',ventas:47311531,unidades:199},
+    {mes:'2026-03',vendedor:'Matias',ventas:23500000,unidades:76},
+    {mes:'2026-03',vendedor:'Hernan',ventas:14540517,unidades:92}
+  ],
+    {nombre:"ALARMA KEYLESS",total_units:66,months:3,avg_monthly:22},
+    {nombre:"AUTOMACIÓN VIDRIOS + PLEG. ESPEJOS",total_units:47,months:3,avg_monthly:15.7},
+    {nombre:"CAMARAS LATERALES + 3 AV inputs",total_units:39,months:3,avg_monthly:13},
+    {nombre:"ALARMA SONORA MARCHA ATRÁS",total_units:35,months:3,avg_monthly:11.7},
+    {nombre:"CARGADOR USB-C (Yaris)",total_units:35,months:3,avg_monthly:11.7},
+    {nombre:"CAMARA DELANTERA (Hilux)",total_units:33,months:3,avg_monthly:11},
+    {nombre:"CARGADOR USB-C (Hilux DC MT)",total_units:28,months:3,avg_monthly:9.3},
+    {nombre:"ALARMA CON CONTROL REMOTO",total_units:26,months:3,avg_monthly:8.7},
+    {nombre:"Estribo Hilux CS 2016-2026",total_units:26,months:3,avg_monthly:8.7},
+    {nombre:"KIT VIDRIOS + CIERRE CENTRALIZADO",total_units:23,months:3,avg_monthly:7.7},
+    {nombre:"KIT ILUMINACIÓN AMBIENT LIGHT",total_units:12,months:2,avg_monthly:6},
+    {nombre:"LOGOTIPO FRONTAL LED",total_units:11,months:2,avg_monthly:5.5},
+  ]
+};
+
+// ======= FORMAT =======
+const fmt = v => '$'+(v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':Math.round(v));
+const fmtFull = v => '$'+Math.round(v).toLocaleString('es-AR');
+Chart.defaults.color='#9090A8'; Chart.defaults.borderColor='rgba(255,255,255,0.06)'; Chart.defaults.font.family='DM Sans';
+
+// ======= NAVIGATION =======
+const titles = {resumen:'Resumen General',vendedores:'Performance Vendedores',concesionarios:'Análisis de Concesionarios',productos:'Análisis de Productos',negocio:'Análisis del Negocio',compras:'Compras / Stock'};
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')?.includes(id))n.classList.add('active');});
+  document.getElementById('page-title').textContent=titles[id];
+}
+
+// ======= CONNECTION =======
+async function conectar() {
+  const url = document.getElementById('urlInput').value.trim();
+  if(!url){document.getElementById('setupError').style.display='block';document.getElementById('setupError').textContent='Ingresá la URL del Apps Script.';return;}
+  document.getElementById('setupError').style.display='none';
+  document.getElementById('loading-overlay').style.display='flex';
+  try {
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json = await res.json();
+    if(json.error) throw new Error(json.error);
+    localStorage.setItem(STORAGE_KEY, url);
+    isLive = true;
+    document.getElementById('setup-overlay').style.display='none';
+    document.getElementById('loading-overlay').style.display='none';
+    document.getElementById('liveDot').style.display='flex';
+    document.getElementById('sourceLabel').textContent='Google Sheets';
+    document.getElementById('sourceLabel').style.color='var(--green)';
+    renderDashboard(json);
+  } catch(e) {
+    document.getElementById('loading-overlay').style.display='none';
+    document.getElementById('setupError').style.display='block';
+    document.getElementById('setupError').textContent='Error: '+e.message+'. Verificá la URL y que el acceso sea "Cualquier persona".';
+  }
+}
+
+function usarDemoData() {
+  document.getElementById('setup-overlay').style.display='none';
+  isLive = false;
+  document.getElementById('sourceLabel').textContent='modo demo';
+  renderDashboard(DEMO_DATA);
+}
+
+async function refreshData() {
+  const url = localStorage.getItem(STORAGE_KEY);
+  if(!url){alert('No hay conexión activa. Reconectá el dashboard.');return;}
+  document.getElementById('loading-overlay').style.display='flex';
+  try {
+    const res = await fetch(url+'?t='+Date.now());
+    const json = await res.json();
+    document.getElementById('loading-overlay').style.display='none';
+    destroyCharts();
+    renderDashboard(json);
+  } catch(e) {
+    document.getElementById('loading-overlay').style.display='none';
+    alert('Error al actualizar: '+e.message);
+  }
+}
+
+function desconectar() {
+  localStorage.removeItem(STORAGE_KEY);
+  destroyCharts();
+  document.getElementById('setup-overlay').style.display='flex';
+  document.getElementById('liveDot').style.display='none';
+}
+
+function destroyCharts() {
+  Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});
+  charts={};
+}
+
+// ======= RENDER =======
+function renderDashboard(d) {
+  DATA = d;
+  const now = new Date(d.generado);
+  document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  
+  const meses = d.evolucion.map(e=>e.mes);
+  document.getElementById('periodLabel').textContent = meses.length ? meses[0]+' – '+meses[meses.length-1] : '—';
+  
+  renderKPIs(d);
+  renderCharts(d);
+  renderTables(d);
+  renderNegocio(d);
+  renderVendedores(d);
+  
+  // Badge alertas
+  const urgentes = (d.recency||[]).filter(r=>r.dias_sin_compra>25).length;
+  const badge = document.getElementById('alertBadge');
+  badge.textContent = urgentes > 0 ? urgentes : '';
+}
+
+function renderKPIs(d) {
+  const k = d.kpis;
+  document.getElementById('kpi-ventas').textContent = fmt(k.total_ventas);
+  document.getElementById('kpi-ventas-sub').textContent = d.evolucion.length+' meses de operación';
+  document.getElementById('kpi-unidades').textContent = k.total_unidades.toLocaleString();
+  document.getElementById('kpi-conc').textContent = k.total_concesionarios;
+  document.getElementById('kpi-conc2').textContent = k.total_concesionarios;
+  document.getElementById('kpi-ticket').textContent = fmt(k.ticket_promedio);
+  document.getElementById('kpi-prods').textContent = k.total_productos;
+  document.getElementById('kpi-prods2').textContent = k.total_productos;
+  
+  // Subtitle
+  const meses = d.evolucion.map(e=>e.mes);
+  document.getElementById('resumen-subtitle').textContent = 'Visión consolidada · '+meses.join(' – ');
+  document.getElementById('conc-subtitle').textContent = k.total_concesionarios+' concesionarios · Red Toyota Argentina';
+  document.getElementById('prod-subtitle').textContent = k.total_productos+' productos en catálogo';
+  
+  // Concesionarios activos (ultimo mes)
+  const ultimoMes = d.evolucion[d.evolucion.length-1]?.mes||'';
+  const activos = (d.recency||[]).filter(r=>r.dias_sin_compra<=31).length;
+  document.getElementById('kpi-conc-activos').textContent = activos;
+  const urgentes = (d.recency||[]).filter(r=>r.dias_sin_compra>25).length;
+  document.getElementById('kpi-conc-urgente').textContent = urgentes;
+  
+  // Productos
+  const sinMov20 = (d.sinMovimiento||[]).filter(s=>s.dias>20).length;
+  document.getElementById('kpi-sin-mov').textContent = sinMov20;
+  const actMes = (d.sinMovimiento||[]).filter(s=>s.dias<=31).length;
+  document.getElementById('kpi-prods-activos').textContent = actMes;
+  const topP = d.topProd?.[0];
+  if(topP) document.getElementById('kpi-top-prod').textContent = topP.nombre.substring(0,18);
+  
+  // Compras KPIs
+  const altaRot = (d.velocity||[]).filter(v=>v.avg_monthly>=10).length;
+  document.getElementById('kpi-alta-rot').textContent = altaRot;
+  const proj = Math.ceil((d.velocity||[]).reduce((s,v)=>s+v.avg_monthly*1.3,0));
+  document.getElementById('kpi-proj').textContent = proj;
+  
+  // Mes comparacion
+  const cambio = k.mes_anterior_ventas > 0 ? ((k.mes_actual_ventas - k.mes_anterior_ventas)/k.mes_anterior_ventas*100).toFixed(1) : null;
+  const dir = cambio >= 0 ? 'up' : 'down';
+  document.getElementById('mesComparacion').innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Mes actual (${k.mes_actual_label||'—'})</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px">${fmt(k.mes_actual_ventas)}</div>
+      <div style="font-size:12px;color:var(--text-3)">${k.mes_actual_unidades} unidades</div>
+      ${cambio!==null?`<span class="kpi-change ${dir}">${cambio>=0?'▲':'▼'} ${Math.abs(cambio)}% vs mes anterior</span>`:''}
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Mes anterior</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px">${fmt(k.mes_anterior_ventas)}</div>
+      <div style="font-size:12px;color:var(--text-3)">${k.mes_anterior_unidades} unidades</div>
+    </div>`;
+  
+  // Select meses negocio
+  const sel = document.getElementById('mesAnalisis');
+  sel.innerHTML = d.evolucion.map(e=>`<option value="${e.ventas}">${e.mes} (${fmt(e.ventas)})</option>`).join('');
+  sel.innerHTML += `<option value="${k.total_ventas}">Total acumulado (${fmt(k.total_ventas)})</option>`;
+}
+
+function renderCharts(d) {
+  // Ventas
+  charts.ventas = new Chart(document.getElementById('chartEvolucionVentas'),{
+    type:'bar',
+    data:{labels:d.evolucion.map(e=>e.mes),datasets:[{data:d.evolucion.map(e=>e.ventas),backgroundColor:'rgba(232,0,29,0.75)',borderColor:'#E8001D',borderWidth:2,borderRadius:6}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}},x:{grid:{display:false}}}}
+  });
+  // Unidades
+  charts.uds = new Chart(document.getElementById('chartEvolucionUnidades'),{
+    type:'line',
+    data:{labels:d.evolucion.map(e=>e.mes),datasets:[{data:d.evolucion.map(e=>e.unidades),borderColor:'#C9A227',backgroundColor:'rgba(201,162,39,0.1)',tension:0.4,fill:true,pointBackgroundColor:'#C9A227',pointRadius:5}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.04)'}},x:{grid:{display:false}}}}
+  });
+  // Pie
+  charts.pie = new Chart(document.getElementById('chartPie'),{
+    type:'doughnut',
+    data:{labels:d.evolucion.map(e=>e.mes),datasets:[{data:d.evolucion.map(e=>e.ventas),backgroundColor:['rgba(232,0,29,0.4)','#E8001D','rgba(232,0,29,0.65)'],borderWidth:2,borderColor:'#18181F'}]},
+    options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12}}},cutout:'65%'}
+  });
+  // Top conc
+  const tc = d.topConc.slice(0,10);
+  charts.topConc = new Chart(document.getElementById('chartTopConc'),{
+    type:'bar',
+    data:{labels:tc.map(c=>c.nombre.replace(' S.A.','').replace(' S.R.L.','')),datasets:[{data:tc.map(c=>c.importe),backgroundColor:'rgba(232,0,29,0.7)',borderRadius:4}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{font:{size:11}},grid:{display:false}}}}
+  });
+  // Top prod
+  const tp = d.topProd.slice(0,10);
+  charts.topProd = new Chart(document.getElementById('chartTopProd'),{
+    type:'bar',
+    data:{labels:tp.map(p=>p.nombre.substring(0,30)+(p.nombre.length>30?'…':'')),datasets:[{data:tp.map(p=>p.importe),backgroundColor:'rgba(201,162,39,0.7)',borderRadius:4}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{font:{size:11}},grid:{display:false}}}}
+  });
+  // Velocidad
+  const vel = d.velocity.slice(0,12);
+  charts.vel = new Chart(document.getElementById('chartVelocidad'),{
+    type:'bar',
+    data:{labels:vel.map(v=>v.nombre.substring(0,28)+(v.nombre.length>28?'…':'')),datasets:[{data:vel.map(v=>v.avg_monthly),backgroundColor:vel.map(v=>v.avg_monthly>=15?'#E8001D':v.avg_monthly>=8?'#C9A227':'rgba(59,130,246,0.7)'),borderRadius:4}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{font:{size:11}},grid:{display:false}}}}
+  });
+  // Margen
+  const tm = d.topProd.slice(0,10);
+  charts.margen = new Chart(document.getElementById('chartMargen'),{
+    type:'bar',
+    data:{labels:tm.map(p=>p.nombre.substring(0,22)+(p.nombre.length>22?'…':'')),datasets:[
+      {label:'Precio Dealer',data:tm.map(p=>p.importe),backgroundColor:'rgba(232,0,29,0.7)',borderRadius:4},
+      {label:'Precio Retail',data:tm.map(p=>Math.round(p.importe*1.25)),backgroundColor:'rgba(0,200,122,0.4)',borderRadius:4}
+    ]},
+    options:{plugins:{legend:{position:'top'}},scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+  // Inline bars
+  buildBars('barConc',d.topConc,'importe',d.topConc[0]?.importe||1,'var(--red)');
+  buildBars('barProd',d.topProd,'importe',d.topProd[0]?.importe||1,'var(--gold)');
+}
+
+function buildBars(id,data,key,max,color) {
+  const el=document.getElementById(id);if(!el)return;
+  el.innerHTML=data.slice(0,8).map(d=>`<div class="bar-row">
+    <div class="bar-label" title="${d.nombre}">${d.nombre.substring(0,26)}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${(d[key]/max*100).toFixed(1)}%;background:${color}"></div></div>
+    <div class="bar-val">${fmt(d[key])}</div>
+  </div>`).join('');
+}
+
+function renderTables(d) {
+  // Tabla conc
+  document.getElementById('tablaConc').innerHTML=(d.topConc||[]).map((c,i)=>{
+    const dias=c.ultima?Math.floor((Date.now()-new Date(c.ultima))/86400000):999;
+    const st=dias>30?'<span class="tag tag-red">Urgente</span>':dias>14?'<span class="tag tag-orange">Llamar</span>':'<span class="tag tag-green">Activo</span>';
+    return `<tr><td style="color:var(--text-3);font-size:11px">${i+1}</td><td class="name">${c.nombre}</td><td>${fmtFull(c.importe)}</td><td>${c.unidades}</td><td>${c.ordenes}</td><td>${c.ultima||'—'}</td><td>${st}</td></tr>`;
+  }).join('');
+  
+  // Tabla vend
+  document.getElementById('tablaConcVend').innerHTML=(d.recency||[]).map((r,i)=>{
+    const d2=r.dias_sin_compra;
+    const st=d2>30?'<span class="tag tag-red">Sin contacto</span>':d2>14?'<span class="tag tag-orange">Seguimiento</span>':'<span class="tag tag-green">Activo</span>';
+    const color=d2>30?'var(--red)':d2>14?'var(--orange)':'var(--green)';
+    return `<tr><td style="color:var(--text-3);font-size:11px">${i+1}</td><td class="name">${r.concesionario}</td><td>${r.ultima_compra||'—'}</td><td style="font-weight:700;color:${color}">${d2} días</td><td>${st}</td></tr>`;
+  }).join('');
+  
+  // Alertas conc
+  document.getElementById('alertasConc').innerHTML=(d.recency||[]).filter(r=>r.dias_sin_compra>=14).map(r=>{
+    const cls=r.dias_sin_compra>30?'red':'orange';
+    return `<div class="alert-item ${cls}"><div class="alert-dot ${cls}"></div><div class="alert-text"><strong>${r.concesionario}</strong>Última compra hace ${r.dias_sin_compra} días</div><div class="alert-days">${r.dias_sin_compra}d</div></div>`;
+  }).join('');
+  
+  // Tabla productos
+  document.getElementById('tablaProductos').innerHTML=(d.topProd||[]).map((p,i)=>{
+    const vel=d.velocity?.find(v=>v.nombre===p.nombre||v.nombre.includes(p.nombre.substring(0,15)));
+    const va=vel?vel.avg_monthly:'—';
+    const vc=vel?(vel.avg_monthly>=15?'var(--red)':vel.avg_monthly>=8?'var(--gold-light)':'var(--text-2)'):'var(--text-3)';
+    return `<tr><td style="color:var(--text-3);font-size:11px">${i+1}</td><td class="name">${p.nombre}</td><td>${fmtFull(p.importe)}</td><td>${p.unidades}</td><td>${p.ultima||'—'}</td><td style="font-weight:700;color:${vc}">${va} u/mes</td></tr>`;
+  }).join('');
+  
+  // Alertas productos
+  document.getElementById('alertasProd').innerHTML=(d.sinMovimiento||[]).filter(s=>s.dias>15).map(s=>{
+    const cls=s.dias>35?'red':'orange';
+    return `<div class="alert-item ${cls}"><div class="alert-dot ${cls}"></div><div class="alert-text"><strong>${s.nombre}</strong>Sin ventas desde ${s.ultima}</div><div class="alert-days">${s.dias}d</div></div>`;
+  }).join('');
+  
+  // Stock tablas
+  document.getElementById('tablaStock').innerHTML=(d.velocity||[]).slice(0,12).map(v=>{
+    const sug=Math.ceil(v.avg_monthly*1.3);
+    const color=v.avg_monthly>=15?'var(--red)':v.avg_monthly>=8?'var(--gold-light)':'var(--blue)';
+    return `<div class="stock-row"><div><div class="stock-prod">${v.nombre}</div><div class="stock-label">${v.months} mes(es)</div></div><div style="text-align:center"><div class="stock-vel" style="color:${color}">${v.avg_monthly}</div><div class="stock-label">uds/mes</div></div><div class="stock-proj">Pedir ${sug}</div></div>`;
+  }).join('');
+  
+  document.getElementById('tablaStockCompleta').innerHTML=(d.velocity||[]).map((v,i)=>{
+    const sug=Math.ceil(v.avg_monthly*1.3);
+    const prio=v.avg_monthly>=15?'<span class="tag tag-red">Alta</span>':v.avg_monthly>=8?'<span class="tag tag-orange">Media</span>':'<span class="tag tag-blue">Normal</span>';
+    return `<tr><td style="color:var(--text-3);font-size:11px">${i+1}</td><td class="name">${v.nombre}</td><td>${v.total_units}</td><td>${v.months}</td><td style="font-weight:700;color:var(--gold-light)">${v.avg_monthly}</td><td style="font-weight:700;color:var(--green)">${sug}</td><td>${prio}</td></tr>`;
+  }).join('');
+}
+
+function renderNegocio(d) {
+  const k = d.kpis;
+  if(document.getElementById('neg-kpi-ventas')) {
+    document.getElementById('neg-kpi-ventas').textContent = fmt(k.total_ventas);
+    document.getElementById('neg-kpi-costo').textContent = k.costo_estimado_total > 0 ? fmt(k.costo_estimado_total) : 'Cargando...';
+    document.getElementById('neg-kpi-flete').textContent = k.flete_a_cargo_total > 0 ? fmt(k.flete_a_cargo_total) : '$0';
+    document.getElementById('neg-kpi-margen').textContent = k.margen_estimado > 0 ? fmt(k.margen_estimado) : '—';
+  }
+}
+
+function renderVendedores(d) {
+  if(!d.vendedores) return;
+  const vendedores = d.vendedores;
+  const mat = vendedores.find(v=>v.vendedor==='Matias') || {};
+  const her = vendedores.find(v=>v.vendedor==='Hernan') || {};
+  const totalVentas = (mat.ventas||0) + (her.ventas||0);
+
+  const mkCard = (v, cls, initial) => `
+    <div class="vendedor-card">
+      <div class="vendedor-header">
+        <div class="vendedor-avatar ${cls}">${initial}</div>
+        <div>
+          <div class="vendedor-name">${v.vendedor||'—'}</div>
+          <div class="vendedor-role">Vendedor · Red Toyota</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div style="font-size:11px;color:var(--text-3)">Participación</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold-light)">${totalVentas>0?((v.ventas/totalVentas)*100).toFixed(1):'—'}%</div>
+        </div>
+      </div>
+      <div class="vendedor-stats">
+        <div class="v-stat"><div class="v-stat-val">${fmt(v.ventas||0)}</div><div class="v-stat-label">Ventas totales</div></div>
+        <div class="v-stat"><div class="v-stat-val">${v.concesionarios_activos||0}</div><div class="v-stat-label">Conc. activos</div></div>
+        <div class="v-stat"><div class="v-stat-val">${v.unidades||0}</div><div class="v-stat-label">Unidades</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="v-stat"><div class="v-stat-val" style="font-size:16px">${v.ordenes||0}</div><div class="v-stat-label">Órdenes</div></div>
+        <div class="v-stat"><div class="v-stat-val" style="font-size:14px;color:var(--green)">${v.margen>0?fmt(v.margen):'—'}</div><div class="v-stat-label">Margen est.</div></div>
+      </div>
+      <div style="margin-top:4px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:4px">
+          <span>Participación en ventas</span><span>${totalVentas>0?((v.ventas/totalVentas)*100).toFixed(1):'—'}%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:${totalVentas>0?(v.ventas/totalVentas*100).toFixed(1):0}%;background:${initial==='M'?'#2563eb':'#dc2626'}"></div></div>
+      </div>
+    </div>`;
+
+  document.getElementById('vendedores-cards').innerHTML = mkCard(mat,'v-mat','M') + mkCard(her,'v-her','H');
+
+  // Tabla con vendedor
+  document.getElementById('tablaConcVend').innerHTML=(d.recency||[]).map((r,i)=>{
+    const d2=r.dias_sin_compra;
+    const st=d2>30?'<span class="tag tag-red">Sin contacto</span>':d2>14?'<span class="tag tag-orange">Seguimiento</span>':'<span class="tag tag-green">Activo</span>';
+    const color=d2>30?'var(--red)':d2>14?'var(--orange)':'var(--green)';
+    const vcolor=r.vendedor==='Matias'?'var(--blue)':'var(--red)';
+    return `<tr><td style="color:var(--text-3);font-size:11px">${i+1}</td><td class="name">${r.concesionario}</td><td style="color:${vcolor};font-weight:600">${r.vendedor||'—'}</td><td>${r.ultima_compra||'—'}</td><td style="font-weight:700;color:${color}">${d2} días</td><td>${st}</td></tr>`;
+  }).join('');
+
+  // Chart mensual por vendedor
+  const mensual = d.mensual_por_vendedor || [];
+  const meses = [...new Set(mensual.map(m=>m.mes))].sort();
+  const matData = meses.map(mes => { const m = mensual.find(x=>x.mes===mes&&x.vendedor==='Matias'); return m?m.ventas:0; });
+  const herData = meses.map(mes => { const m = mensual.find(x=>x.mes===mes&&x.vendedor==='Hernan'); return m?m.ventas:0; });
+
+  if(charts.vendMensual) charts.vendMensual.destroy();
+  charts.vendMensual = new Chart(document.getElementById('chartVendMensual'),{
+    type:'bar',
+    data:{labels:meses,datasets:[
+      {label:'Matías',data:matData,backgroundColor:'rgba(37,99,235,0.8)',borderRadius:4},
+      {label:'Hernán',data:herData,backgroundColor:'rgba(220,38,38,0.8)',borderRadius:4}
+    ]},
+    options:{plugins:{legend:{position:'top'}},scales:{x:{stacked:false,grid:{display:false}},y:{ticks:{callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+
+  if(charts.vendPie) charts.vendPie.destroy();
+  charts.vendPie = new Chart(document.getElementById('chartVendPie'),{
+    type:'doughnut',
+    data:{labels:['Matías','Hernán'],datasets:[{data:[mat.ventas||0,her.ventas||0],backgroundColor:['rgba(37,99,235,0.8)','rgba(220,38,38,0.8)'],borderWidth:2,borderColor:'#18181F'}]},
+    options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12}}},cutout:'65%'}
+  });
+}
+
+function calcularNegocio() {
+  const ingresos=parseFloat(document.getElementById('mesAnalisis').value)||0;
+  const co=parseFloat(document.getElementById('costoOp').value)||0;
+  const cr=parseFloat(document.getElementById('costoRRHH').value)||0;
+  const cf=parseFloat(document.getElementById('costoFin').value)||0;
+  const cx=parseFloat(document.getElementById('costoOtros').value)||0;
+  
+  // Costo de productos del mes seleccionado (estimado desde los datos)
+  const costosProd = DATA?.kpis?.costo_estimado_total || 0;
+  const fletes = DATA?.kpis?.flete_a_cargo_total || 0;
+  const otrosCostos = co+cr+cf+cx;
+  const total = costosProd + fletes + otrosCostos;
+  const util = ingresos - total;
+  const margen = ingresos>0?(util/ingresos*100).toFixed(1):0;
+  
+  const el=document.getElementById('resultadoNegocio');
+  el.style.display='block';
+  el.innerHTML=`
+    <div class="result-row"><span class="result-label">📥 Ingresos del mes</span><span class="result-value neu">${fmtFull(ingresos)}</span></div>
+    <div class="result-row"><span class="result-label">🛍️ Costo estimado productos</span><span class="result-value neg">- ${fmtFull(costosProd)}</span></div>
+    <div class="result-row"><span class="result-label">🚛 Flete a nuestro cargo</span><span class="result-value neg">- ${fmtFull(fletes)}</span></div>
+    <div class="result-row"><span class="result-label">🏢 Gastos operativos</span><span class="result-value neg">- ${fmtFull(co)}</span></div>
+    <div class="result-row"><span class="result-label">👥 RRHH y sueldos</span><span class="result-value neg">- ${fmtFull(cr)}</span></div>
+    <div class="result-row"><span class="result-label">💳 Gastos financieros</span><span class="result-value neg">- ${fmtFull(cf)}</span></div>
+    <div class="result-row"><span class="result-label">📎 Otros gastos</span><span class="result-value neg">- ${fmtFull(cx)}</span></div>
+    <div class="result-row" style="border-top:1px solid var(--border-red)"><span class="result-label" style="font-weight:700;color:var(--text)">💰 Utilidad neta estimada</span><span class="result-value ${util>=0?'pos':'neg'}" style="font-size:18px">${fmtFull(util)}</span></div>
+    <div class="result-row"><span class="result-label">📊 Margen neto</span><span class="result-value ${util>=0?'pos':'neg'}">${margen}%</span></div>
+    ${costosProd===0?'<div style="font-size:12px;color:var(--orange);margin-top:8px">⚠️ El costo de productos se calcula automáticamente desde los códigos del Sheet cuando están mapeados.</div>':''}
+  `;
+}
+
+// ======= INIT =======
+window.addEventListener('load', ()=>{
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if(saved) {
+    document.getElementById('urlInput').value = saved;
+  }
+});
+</script>
+</body>
+</html>
