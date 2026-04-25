@@ -537,7 +537,7 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 const URL_KEY='tury_url';
-const HURL='https://script.google.com/macros/s/AKfycbyNZ127Sg33TvHLPfRnCQ4hfO_olqKFCSu07ZwO_mzubqeyT20xlPTdTU7f7WNiayD7vA/exec';
+const HURL='https://script.google.com/macros/s/AKfycbyIAHbZwVDxJj2qsAXvMt2rglQ-VzZzAi0Wuzan-h0stNax8M-YdY876DKeWDWAi6N-ag/exec';
 const PWD='rosita';
 const TC=1415,NP=.25,PN=.50,GI=.25,AI=.25,C3=.25,C6=.25,FEE=.15,COM=.043,COGS=.35;
 let D=null,CH={},UNL=false;
@@ -560,7 +560,7 @@ function go(id){
 function askP(){if(UNL){go('negocio');return;}$('pm').style.display='flex';$('pI').value='';$('pE').style.display='none';setTimeout(()=>$('pI').focus(),100);}
 function ck(){if($('pI').value===PWD){UNL=true;$('pm').style.display='none';go('negocio');}else{$('pE').style.display='block';$('pI').value='';}}
 function disconn(){localStorage.removeItem(URL_KEY);Object.keys(CH).forEach(dc);$('so').style.display='flex';$('ldot').style.display='none';}
-async function refreshData(){const u=localStorage.getItem(URL_KEY);if(!u){alert('No hay conexion activa.');return;}$('lo').style.display='flex';try{const j=await fetchJSONP(u);$('lo').style.display='none';Object.keys(CH).forEach(dc);renderAll(j);}catch(e){$('lo').style.display='none';alert('Error: '+e.message);}}
+async function refreshData(){const u=localStorage.getItem(URL_KEY);if(!u){alert('No hay conexion activa.');return;}$('lo').style.display='flex';try{const j=await(await fetch(u+'?t='+Date.now())).json();$('lo').style.display='none';Object.keys(CH).forEach(dc);renderAll(j);}catch(e){$('lo').style.display='none';alert('Error: '+e.message);}}
 function fetchJSONP(url, callbackName) {
   return new Promise((resolve, reject) => {
     const cbName = callbackName || 'turyCallback_' + Date.now();
@@ -576,7 +576,7 @@ function fetchJSONP(url, callbackName) {
     setTimeout(() => { if(window[cbName]) { delete window[cbName]; reject(new Error('Timeout')); } }, 15000);
   });
 }
-async function conectar(){const u=$('urlI').value.trim();if(!u){showE('Ingresa la URL.');return;}showE('');$('lo').style.display='flex';try{const j=await fetchJSONP(u);if(j.error)throw new Error(j.error);localStorage.setItem(URL_KEY,u);$('so').style.display='none';$('lo').style.display='none';$('ldot').style.display='flex';$('sl').textContent='Google Sheets';$('sl').style.color='var(--green)';renderAll(j);}catch(e){$('lo').style.display='none';showE('Error: '+e.message);}}
+async function conectar(){const u=$('urlI').value.trim();if(!u){showE('Ingresa la URL.');return;}showE('');$('lo').style.display='flex';try{const j=await(await fetch(u)).json();if(j.error)throw new Error(j.error);localStorage.setItem(URL_KEY,u);$('so').style.display='none';$('lo').style.display='none';$('ldot').style.display='flex';$('sl').textContent='Google Sheets';$('sl').style.color='var(--green)';renderAll(j);}catch(e){$('lo').style.display='none';showE('Error: '+e.message);}}
 function showE(m){const e=$('sErr');e.textContent=m;e.style.display=m?'block':'none';}
 function usarDemo(){$('so').style.display='none';$('sl').textContent='modo demo';renderAll(DEMO);}
 
@@ -1491,7 +1491,7 @@ window.addEventListener('load',()=>{
   localStorage.setItem(URL_KEY,HURL);
   $('urlI').value=HURL;
   $('lo').style.display='flex';
-  fetchJSONP(HURL).then(j=>{
+  fetch(HURL).then(r=>r.json()).then(j=>{
     if(j.error)throw new Error(j.error);
     $('so').style.display='none';$('lo').style.display='none';
     $('ldot').style.display='flex';$('sl').textContent='Google Sheets';$('sl').style.color='var(--green)';
