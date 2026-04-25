@@ -519,6 +519,47 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
 
   <div class="sec" id="sec-compras">
     <div class="sh"><h2>Compras y Proyeccion de Stock</h2><p>Velocidad de demanda y reorden</p></div>
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px">
+        <div>
+          <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Stock ERP</div>
+          <div style="font-size:12px;color:var(--text-2)" id="erpStockStatus">No cargado</div>
+        </div>
+        <label style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--text-2);cursor:pointer;font-family:'DM Sans',sans-serif" for="fileStock">📂 Cargar CSV</label>
+        <input type="file" id="fileStock" accept=".csv" style="display:none" onchange="loadStockCSV(this)">
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px">
+        <div>
+          <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Facturación ERP</div>
+          <div style="font-size:12px;color:var(--text-2)" id="erpFactStatus">No cargado</div>
+        </div>
+        <label style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--text-2);cursor:pointer;font-family:'DM Sans',sans-serif" for="fileFact">📂 Cargar CSV</label>
+        <input type="file" id="fileFact" accept=".csv" style="display:none" onchange="loadFactCSV(this)">
+      </div>
+      <div id="erpCompBtn" style="display:none">
+        <button onclick="showERPComparativa()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Ver comparativa ERP</button>
+      </div>
+    </div>
+    <div id="erpComparativa" style="display:none;margin-bottom:24px">
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="ct">📦 Stock: Teórico vs ERP Real</div>
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:12px">Importaciones menos pedidos entregados vs stock físico del ERP</div>
+          <table class="dt"><thead><tr><th>Código</th><th>Teórico</th><th>ERP Real</th><th>Diferencia</th><th>Vel/mes</th></tr></thead>
+          <tbody id="tStockComp"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="ct">💰 Pedidos Sheet vs Facturación ERP</div>
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:12px">Lo que pidieron los concesionarios vs lo que facturaste realmente</div>
+          <table class="dt"><thead><tr><th>Código</th><th>Pedido</th><th>Facturado</th><th>Diff</th><th>Nota</th></tr></thead>
+          <tbody id="tFactComp"></tbody></table>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="ct">📊 Ventas: Pedidos Sheet vs Facturación ERP por mes</div>
+        <canvas id="cERPComp" height="140"></canvas>
+      </div>
+    </div>
     <div class="g3">
       <div class="kc hi"><div class="kl">Alta rotacion (+10/mes)</div><div class="kv" id="kAR">—</div></div>
       <div class="kc"><div class="kl">Proyeccion proximo mes</div><div class="kv" style="color:var(--gold-light)" id="kPrj">—</div><div class="ks">uds estimadas</div></div>
@@ -1486,6 +1527,216 @@ function rInsTend() {
   `;
 }
 
+
+
+// ============================================================
+// ERP DATA — Carga de Stock y Facturación
+// ============================================================
+let ERP_STOCK = null;
+let ERP_FACT  = null;
+
+function parseCSVText(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (!lines.length) return [];
+  const sep = lines[0].includes(';') ? ';' : ',';
+  const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line => {
+    const vals = line.split(sep).map(v => v.trim().replace(/^"|"$/g,''));
+    const obj = {};
+    headers.forEach((h,i) => { obj[h] = vals[i] || ''; });
+    return obj;
+  });
+}
+
+function parseNumAR(v) {
+  if (!v) return 0;
+  return parseFloat(v.toString().replace(/\./g,'').replace(',','.')) || 0;
+}
+
+function loadStockCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const rows = parseCSVText(e.target.result);
+    ERP_STOCK = {};
+    rows.forEach(r => {
+      const cod = (r['Producto'] || '').trim();
+      const qty = parseNumAR(r['Cantidad1'] || r['Cantidad'] || '0');
+      if (cod) ERP_STOCK[cod] = qty;
+    });
+    const count = Object.keys(ERP_STOCK).length;
+    document.getElementById('erpStockStatus').textContent = count + ' productos cargados';
+    document.getElementById('erpStockStatus').style.color = 'var(--green)';
+    checkERPReady();
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function loadFactCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const rows = parseCSVText(e.target.result);
+    ERP_FACT = {};
+    const byMes = {};
+    rows.forEach(r => {
+      const cod = (r['Producto'] || '').trim();
+      if (!cod || (!cod.startsWith('ATURY') && !cod.startsWith('CS0640'))) return;
+      const uds = parseNumAR(r['Cantidad'] || '0');
+      const imp = parseNumAR(r['Importe'] || r['Importe mon. principal'] || '0');
+      const mes = (r['Año - mes'] || r['Mes - fecha'] || '').substring(0,7);
+      if (!ERP_FACT[cod]) ERP_FACT[cod] = {uds:0, importe:0};
+      ERP_FACT[cod].uds     += uds;
+      ERP_FACT[cod].importe += imp;
+      if (mes) {
+        if (!byMes[mes]) byMes[mes] = {mes, ventas:0, uds:0};
+        byMes[mes].ventas += imp;
+        byMes[mes].uds    += uds;
+      }
+    });
+    ERP_FACT._byMes = Object.values(byMes).sort((a,b) => a.mes.localeCompare(b.mes));
+    const count = Object.keys(ERP_FACT).filter(k => !k.startsWith('_')).length;
+    document.getElementById('erpFactStatus').textContent = count + ' productos cargados';
+    document.getElementById('erpFactStatus').style.color = 'var(--green)';
+    checkERPReady();
+  };
+  reader.readAsText(file, 'latin1');
+}
+
+function checkERPReady() {
+  if (ERP_STOCK || ERP_FACT) {
+    document.getElementById('erpCompBtn').style.display = 'block';
+  }
+}
+
+function showERPComparativa() {
+  document.getElementById('erpComparativa').style.display = 'block';
+  document.getElementById('erpComparativa').scrollIntoView({behavior:'smooth'});
+  if (!D) return;
+
+  const COMPRAS = {
+    'ATURY11401':16,'ATURY11402':41,'ATURY11420':31,'ATURY12401':41,
+    'ATURY11415':12,'ATURY11403':41,'ATURY11416':4,'ATURY11417':44,
+    'ATURY11422':70,'ATURY11412':41,'ATURY11409':1,'ATURY11414':41,
+    'ATURY11421':4,'ATURY11405':50,'ATURY11410':6,'ATURY11406':380,
+    'ATURY12402':36,'ATURY12403':37,'ATURY12404':37,'ATURY12405':1,
+    'ATURY12412':37,'ATURY12406':37,'ATURY12407':1,'ATURY12408':37,
+    'ATURY12409':37,'ATURY12410':37,'ATURY12414':9,'ATURY12415':45,
+    'ATURY12416':5,'ATURY12417':5,'ATURY12418':5,'ATURY12419':5,
+    'ATURY12420':1,'ATURY12423':80,'ATURY12424':46,'ATURY03504':66,
+    'ATURY04504':46,'ATURY09510':46,'ATURY04505':42,'ATURY09514':6,
+    'ATURY04509':40,'ATURY06507':36,'ATURY09515':56,
+    'ATURY03506':10,'ATURY03507':10,'ATURY09502':20,'ATURY09503':10,
+    'ATURY09504':5,'ATURY09505':10,'ATURY09526':10,'ATURY09506':10,
+    'ATURY09509':5,'ATURY09525':5,'ATURY12510':15,'ATURY12513':15,
+    'ATURY11501':10,'ATURY06503':50,
+  };
+
+  const vel = {};
+  (D.velocity||[]).forEach(v => { if(v.nombre) vel[v.nombre] = v.avg_monthly || 0; });
+
+  // ── COMPARATIVA STOCK ──
+  if (ERP_STOCK) {
+    const factERP = ERP_FACT || {};
+    const rows = Object.entries(ERP_STOCK)
+      .filter(([cod]) => cod.startsWith('ATURY'))
+      .map(([cod, erpQty]) => {
+        const comprado = COMPRAS[cod] || 0;
+        const facturado = factERP[cod] ? factERP[cod].uds : 0;
+        const teorico = comprado - facturado;
+        const diff = erpQty - teorico;
+        return {cod, comprado, facturado, teorico, erp: erpQty, diff, vel: vel[cod]||0};
+      })
+      .sort((a,b) => Math.abs(b.diff) - Math.abs(a.diff));
+
+    document.getElementById('tStockComp').innerHTML = rows.map(r => {
+      const dc = Math.abs(r.diff) > 2 ? 'var(--orange)' : 'var(--green)';
+      const ds = (r.diff >= 0 ? '+' : '') + r.diff;
+      return '<tr>' +
+        '<td class="nm" style="font-size:11px">' + r.cod + '</td>' +
+        '<td style="text-align:center">' + r.teorico + '</td>' +
+        '<td style="text-align:center;color:var(--gold-light);font-weight:700">' + r.erp + '</td>' +
+        '<td style="text-align:center;font-weight:700;color:' + dc + '">' + ds + '</td>' +
+        '<td style="text-align:center;color:var(--text-3);font-size:11px">' + r.vel + '/m</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // ── COMPARATIVA FACTURACIÓN ──
+  if (ERP_FACT) {
+    // Pedidos del Sheet por código ATURY
+    const sheetPedidos = {};
+    (D.velocity||[]).forEach(v => {
+      if (v.nombre && v.nombre.startsWith('ATURY')) {
+        sheetPedidos[v.nombre] = v.total_units || 0;
+      }
+    });
+
+    const allCodes = new Set([
+      ...Object.keys(sheetPedidos),
+      ...Object.keys(ERP_FACT).filter(k => !k.startsWith('_'))
+    ]);
+
+    const rows2 = [...allCodes].map(cod => {
+      const pedido = sheetPedidos[cod] || 0;
+      const facturado = ERP_FACT[cod] ? ERP_FACT[cod].uds : 0;
+      const diff = facturado - pedido;
+      return {cod, pedido, facturado, diff};
+    }).filter(r => r.pedido > 0 || r.facturado > 0)
+      .sort((a,b) => Math.abs(b.diff) - Math.abs(a.diff));
+
+    document.getElementById('tFactComp').innerHTML = rows2.map(r => {
+      const dc = r.diff < 0 ? 'var(--orange)' : r.diff > 0 ? 'var(--blue)' : 'var(--green)';
+      const ds = (r.diff >= 0 ? '+' : '') + r.diff;
+      const nota = r.diff < 0 ? '<span class="tag tag-o">Sin stock/pendiente</span>' :
+                   r.diff > 0 ? '<span class="tag tag-b">Extra facturado</span>' :
+                   '<span class="tag tag-g">OK</span>';
+      return '<tr>' +
+        '<td class="nm" style="font-size:11px">' + r.cod + '</td>' +
+        '<td style="text-align:center">' + r.pedido + '</td>' +
+        '<td style="text-align:center;color:var(--gold-light);font-weight:700">' + r.facturado + '</td>' +
+        '<td style="text-align:center;font-weight:700;color:' + dc + '">' + ds + '</td>' +
+        '<td>' + nota + '</td>' +
+        '</tr>';
+    }).join('');
+
+    // Gráfico comparativo por mes
+    const mesFact = ERP_FACT._byMes || [];
+    const mesSheet = (D.evolucion||[]);
+    const allMeses = [...new Set([...mesSheet.map(e=>e.mes), ...mesFact.map(m=>m.mes)])].sort();
+
+    dc('cERPComp');
+    CH.cERPComp = new Chart(document.getElementById('cERPComp'), {
+      type: 'bar',
+      data: {
+        labels: allMeses,
+        datasets: [
+          {
+            label: 'Pedidos Sheet (lo que pidieron)',
+            data: allMeses.map(m => { const e = mesSheet.find(x=>x.mes===m); return e ? e.ventas : 0; }),
+            backgroundColor: 'rgba(59,130,246,0.6)',
+            borderRadius: 4
+          },
+          {
+            label: 'Facturación ERP (lo que salió)',
+            data: allMeses.map(m => { const e = mesFact.find(x=>x.mes===m); return e ? e.ventas : 0; }),
+            backgroundColor: 'rgba(0,200,122,0.6)',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { ticks: { callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,.04)' } }
+        }
+      }
+    });
+  }
+}
 
 window.addEventListener('load',()=>{
   localStorage.setItem(URL_KEY,HURL);
