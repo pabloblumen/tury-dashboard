@@ -148,6 +148,22 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
   </div>
 </div>
 <div id="lo"><div class="sp"></div><div class="lt">Cargando datos...</div></div>
+
+<div id="evoPanel" style="display:none;position:fixed;inset:0;background:rgba(10,10,15,0.92);z-index:300;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg3);border:1px solid var(--border-red);border-radius:16px;padding:28px;max-width:800px;width:100%;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px" id="evoPanelTitle">—</div>
+        <div style="font-size:12px;color:var(--text-3)" id="evoPanelSub">—</div>
+      </div>
+      <button onclick="document.getElementById('evoPanel').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--text-3);border-radius:8px;padding:8px 16px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px">✕ Cerrar</button>
+    </div>
+    <div class="g3" id="evoPanelKPIs" style="margin-bottom:20px"></div>
+    <div class="card" style="margin-bottom:16px"><div class="ct" id="evoPanelChartLabel">Evolución mensual</div><canvas id="cEvoPanel" height="160"></canvas></div>
+    <div class="card"><div class="ct" id="evoPanelTableLabel">Detalle</div><div id="evoPanelTable"></div></div>
+  </div>
+</div>
+
 <div id="pm">
   <div style="background:var(--bg3);border:1px solid var(--border-red);border-radius:16px;padding:36px;max-width:360px;width:90%;text-align:center">
     <div style="font-size:32px;margin-bottom:8px">🔒</div>
@@ -169,6 +185,7 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
     <div class="ni" onclick="go('productos')"><span class="ni-i">📦</span><span>Productos</span></div>
     <div class="ni" onclick="askP()"><span class="ni-i">💰</span><span>Analisis Financiero</span><span style="font-size:10px;margin-left:auto">🔒</span></div>
     <div class="ni" onclick="go('compras')"><span class="ni-i">🛒</span><span>Compras / Stock</span><span class="nb" id="alertBadge"></span></div>
+    <div class="ni" onclick="go('insights')"><span class="ni-i">🧠</span><span>Insights</span><span class="nb" id="insightsBadge" style="background:var(--gold)"></span></div>
   </nav>
   <div class="sf">
     <div class="ui2">Actualizado: <span id="lu">—</span><br><span id="sl" style="color:var(--text-3)">demo</span></div>
@@ -181,6 +198,9 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
     <div class="tp" id="pt">Resumen General</div>
     <div class="tr">
       <div class="ld" id="ldot" style="display:none">EN VIVO</div>
+      <select id="filtroMes" class="pb" style="cursor:pointer;background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--text-2);font-family:'DM Sans',sans-serif;outline:none" onchange="applyMesFilter()">
+        <option value="">Todos los meses</option>
+      </select>
       <div class="pb">Periodo: <strong id="pl">—</strong></div>
     </div>
   </div>
@@ -429,6 +449,74 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
     </div>
   </div>
 
+  
+  <div class="sec" id="sec-insights">
+    <div class="sh"><h2>Insights Automáticos</h2><p>Análisis inteligente de oportunidades, riesgos y tendencias</p></div>
+    <div class="tab-bar">
+      <button class="tab active" onclick="itab('riesgo',this)">⚠️ Clientes en riesgo</button>
+      <button class="tab" onclick="itab('skus',this)">📦 SKUs problemáticos</button>
+      <button class="tab" onclick="itab('oport',this)">💡 Oportunidades</button>
+      <button class="tab" onclick="itab('tend',this)">📈 Tendencias</button>
+    </div>
+    <div id="it-riesgo">
+      <div class="g3" style="margin-bottom:20px">
+        <div class="kc hi"><div class="kl">Sin comprar +30 días</div><div class="kv" id="ins-r30">—</div></div>
+        <div class="kc"><div class="kl">Sin comprar +60 días</div><div class="kv" style="color:var(--orange)" id="ins-r60">—</div></div>
+        <div class="kc"><div class="kl">Nunca compraron</div><div class="kv" style="color:var(--blue)" id="ins-r0">—</div></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="ct">Clientes que requieren acción inmediata</div>
+        <div id="ins-riesgo-list"></div>
+      </div>
+    </div>
+    <div id="it-skus" style="display:none">
+      <div class="g3" style="margin-bottom:20px">
+        <div class="kc hi"><div class="kl">Sin ventas +30 días</div><div class="kv" id="ins-s30">—</div></div>
+        <div class="kc"><div class="kl">Venta única (1 conc)</div><div class="kv" style="color:var(--orange)" id="ins-s1">—</div></div>
+        <div class="kc"><div class="kl">Alta rotación (+10/mes)</div><div class="kv" style="color:var(--green)" id="ins-salt">—</div></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ct">⚠️ SKUs a revisar (baja adopción)</div>
+          <div id="ins-skus-bad" style="max-height:400px;overflow-y:auto"></div>
+        </div>
+        <div class="card">
+          <div class="ct">⭐ SKUs estrella (alta rotación)</div>
+          <div id="ins-skus-good" style="max-height:400px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+    <div id="it-oport" style="display:none">
+      <div class="card" style="margin-bottom:16px">
+        <div class="ct">💡 Oportunidades detectadas por vendedor</div>
+        <div class="g2" style="margin-top:16px">
+          <div>
+            <div style="font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;font-weight:700">Matías</div>
+            <div id="ins-opp-m"></div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;font-weight:700">Hernán</div>
+            <div id="ins-opp-h"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">Concesionarios con baja cobertura de catálogo (&lt;30%)</div>
+        <div id="ins-opp-cob"></div>
+      </div>
+    </div>
+    <div id="it-tend" style="display:none">
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card"><div class="ct">Tendencia de ventas por mes</div><canvas id="cInsTend" height="180"></canvas></div>
+        <div class="card"><div class="ct">Crecimiento por categoría</div><canvas id="cInsCat" height="180"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="ct">Resumen ejecutivo automático</div>
+        <div id="ins-resumen" style="font-size:13px;color:var(--text-2);line-height:1.8;padding:8px 0"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="sec" id="sec-compras">
     <div class="sh"><h2>Compras y Proyeccion de Stock</h2><p>Velocidad de demanda y reorden</p></div>
     <div class="g3">
@@ -441,7 +529,7 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
       <div class="card"><div class="ct">Proyeccion Proximo Mes</div><div style="font-size:12px;color:var(--text-3);margin-bottom:12px">Stock sugerido = promedio x 1.3</div><div id="stDiv" style="max-height:300px;overflow-y:auto"></div></div>
     </div>
     <div class="card"><div class="ct">Tabla Completa</div>
-      <table class="dt"><thead><tr><th>#</th><th>Producto</th><th>Total</th><th>Meses</th><th>Prom/mes</th><th>Stock Sugerido</th><th>Prioridad</th></tr></thead>
+      <table class="dt"><thead><tr><th>#</th><th>Código</th><th>Importado</th><th>Facturado</th><th>Pendiente</th><th>Teórico</th><th>ERP Real</th><th>Diferencia</th><th>Vel/mes</th><th>Prioridad</th></tr></thead>
       <tbody id="tSt"></tbody></table>
     </div>
   </div>
@@ -460,7 +548,7 @@ const $=id=>document.getElementById(id);
 const fmt=v=>'$'+(v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':Math.round(v));
 const fN=v=>'$'+Math.round(v).toLocaleString('es-AR');
 const dc=id=>{if(CH[id]){try{CH[id].destroy();}catch(e){}delete CH[id];}};
-const TITLES={resumen:'Resumen General',vendedores:'Performance Vendedores',ventas:'Analisis de Ventas',concesionarios:'Analisis de Concesionarios',productos:'Analisis de Productos',negocio:'Analisis Financiero',compras:'Compras / Stock'};
+const TITLES={resumen:'Resumen General',vendedores:'Performance Vendedores',ventas:'Analisis de Ventas',concesionarios:'Analisis de Concesionarios',productos:'Analisis de Productos',negocio:'Analisis Financiero',compras:'Compras / Stock',insights:'Insights Automáticos'};
 
 function go(id){
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
@@ -548,86 +636,13 @@ const SD={
 const MATRIX_DATA=[{"nombre": "Autos del Sur S.A.", "vendedor": "Matias", "provincia": "Chubut", "activo": true, "groups": {"Automatización de vidrios": "both", "Cámaras y visión": "both", "Alarmas y seguridad": "both", "Carga y conectividad": "both", "Iluminación": "both", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["MÓDULO PLEGAMIENTO DE ESPEJOS (2018-2026)", "CARGADOR USB-C + INDUCTIVO (Corolla '21-'26)", "CAMARAS LATERALES + 3 AV inputs", "ALARMA CON CONTROL REMOTO", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (C. Cross 2024-2026)", "CARGADOR USB-C + INDUCTIVO (Hilux DC MT)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Yaris 2018-2026)", "CAMARA DELANTERA CON SOPORTE (C.Cross '24-'26)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux 2016-2026)", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "ALARMA KEYLESS", "ALARMA SONORA PARA MARCHA TRAS (HIACE)", "LOGOTIPO FRONTAL LED (Hilux y SW4 sin TSS)", "ALARMA ANTIROBO DE RUEDAS + CERR. AUTOM. DE PUERTA", "KIT ILUMINACIÓN INTERNA - AMBIENT LIGHT", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux, SW4 y Yaris)", "CAMARAS LATERALES + 3 AV inputs", "Estribo Hilux CS 2016-2026", "KIT CAMARA + ARNES DEL REMOLQUE Y DEL VEHICULO", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Etios 2015-2023)", "CARGADOR USB-C + INDUCTIVO (Yaris '18-'26)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "CAMARA DELANTERA CON SOPORTE (SW4 '20-'26)", "ALARMA ANTIROBO DE RUEDAS + CERR. AUTOM. DE PUERTA"]}, {"nombre": "Autonort S.A.", "vendedor": "Hernan", "provincia": "GBA", "activo": true, "groups": {"Automatización de vidrios": "both", "Cámaras y visión": "combo", "Alarmas y seguridad": "both", "Carga y conectividad": "both", "Iluminación": "both", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "individual"}, "products": ["MÓDULO PLEGAMIENTO DE ESPEJOS (2018-2026)", "ALARMA CON CONTROL REMOTO", "Funda para llave inteligente - Version XLI / XEI", "AUTOMATIZACIÓN VIDRIOS, ESPEJOS, TECHO, TILT DOWN", "CARGADOR USB-C + INDUCTIVO (Hilux DC MT)", "Funda para llave inteligente - Version SEG", "Caja slim para subwoofer de 8”", "Módulo de inclinación de espejos - YC", "Soporte de fijación para caja de subwoofer 8\"", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "ALARMA KEYLESS", "LOGOTIPO FRONTAL LED (Hilux y SW4 sin TSS)", "ALARMA ANTIROBO DE RUEDAS + CERR. AUTOM. DE PUERTA", "Iluminación blanca del baúl - YC", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux, SW4 y Yaris)", "Luz de suelo con logotipo Toyota -YC", "Estribo Hilux CS 2016-2026", "CARGADOR USB-C + INDUCTIVO (Yaris '18-'26)"]}, {"nombre": "Audec S.A.", "vendedor": "Hernan", "provincia": "Corrientes", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "individual", "Alarmas y seguridad": "individual", "Carga y conectividad": "individual", "Iluminación": "individual", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["MÓDULO PLEGAMIENTO DE ESPEJOS (2018-2026)", "KIT ILUMINACIÓN INTERNA - AMBIENT LIGHT", "CAMARAS LATERALES + 3 AV inputs", "CARGADOR USB-C + INDUCTIVO (Corolla '21-'26)", "ALARMA CON CONTROL REMOTO", "Estribo Hilux CS 2016-2026", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)"]}, {"nombre": "Autolux S.A.", "vendedor": "Matias", "provincia": "Salta", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "individual", "Alarmas y seguridad": "individual", "Carga y conectividad": "individual", "Iluminación": "individual", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "ALARMA KEYLESS", "Luz de suelo con logotipo Toyota -YC", "CARGADOR USB-C + INDUCTIVO (Hilux DC MT)", "CARGADOR USB-C + INDUCTIVO (Yaris '18-'26)", "LOGOTIPO FRONTAL LED (Hilux y SW4 sin TSS)", "MÓDULO PLEGAMIENTO DE ESPEJOS (2018-2026)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "CAMARAS LATERALES + 3 AV inputs", "CAMARAS LATERALES + 3 AV inputs", "ALARMA CON CONTROL REMOTO", "Estribo Hilux CS 2016-2026", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)"]}, {"nombre": "Yacopini  Inversora S.A.", "vendedor": "Hernan", "provincia": "Mendoza", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "individual", "Alarmas y seguridad": "individual", "Carga y conectividad": "individual", "Iluminación": "individual", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["ALARMA ANTIROBO DE RUEDAS + CERR. AUTOM. DE PUERTA", "ALARMA CON CONTROL REMOTO", "ALARMA KEYLESS", "ALARMA SONORA PARA MARCHA TRAS (HIACE)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux, SW4 y Yaris)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)", "CAMARA DELANTERA CON SOPORTE (Yaris 2018-2026)", "CAMARAS LATERALES + 3 AV inputs", "CARGADOR USB-C + INDUCTIVO (Hilux DC MT)", "CARGADOR USB-C + INDUCTIVO (Yaris '18-'26)", "Estribo Hilux CS 2016-2026", "KIT CAMARA + ARNES DEL REMOLQUE Y DEL VEHICULO", "KIT ILUMINACIÓN INTERNA - AMBIENT LIGHT", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "LOGOTIPO FRONTAL LED (Hilux y SW4 sin TSS)"]}, {"nombre": "Amiun S.A.", "vendedor": "Hernan", "provincia": "Santa Fe", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "individual", "Alarmas y seguridad": "individual", "Carga y conectividad": "individual", "Iluminación": "individual", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["MÓDULO PLEGAMIENTO DE ESPEJOS (2018-2026)", "CAMARA DELANTERA CON SOPORTE (Corolla 2020-2026)", "CARGADOR USB-C + INDUCTIVO (Corolla '21-'26)", "CAMARAS LATERALES + 3 AV inputs", "ALARMA CON CONTROL REMOTO", "CAMARA DELANTERA CON SOPORTE (C.Cross '24-'26)", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "ALARMA KEYLESS", "ALARMA SONORA PARA MARCHA TRAS (HIACE)", "LOGOTIPO FRONTAL LED (Hilux y SW4 sin TSS)", "ALARMA ANTIROBO DE RUEDAS + CERR. AUTOM. DE PUERTA", "CAMARAS LATERALES + 1 AV input", "KIT ILUMINACIÓN INTERNA - AMBIENT LIGHT", "CAMARAS LATERALES + 3 AV inputs", "Estribo Hilux CS 2016-2026", "KIT CAMARA + ARNES DEL REMOLQUE Y DEL VEHICULO", "CAMARA DELANTERA CON SOPORTE (Yaris 2018-2026)", "CONECTOR 7 PINES (Hilux CS)", "CAMARAS LATERALES + 3 AV inputs"]}, {"nombre": "Asahi Motors S.A.", "vendedor": "Hernan", "provincia": "GBA", "activo": true, "groups": {"Automatización de vidrios": "combo", "Cámaras y visión": "combo", "Alarmas y seguridad": "combo", "Carga y conectividad": "combo", "Iluminación": "combo", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Haimovich  Paraná S.A.", "vendedor": "Hernan", "provincia": "Entre Ríos", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "individual", "Alarmas y seguridad": "individual", "Carga y conectividad": "none", "Iluminación": "individual", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["ALARMA CON CONTROL REMOTO", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux 2016-2026)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux, SW4 y Yaris)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "AUTOMATIZACIÓN VIDRIOS, ESPEJOS, TECHO, TILT DOWN", "CAMARAS LATERALES + 3 AV inputs", "Estribo Hilux CS 2016-2026", "KIT LED MANIJAS", "KIT LEDS ALFOMBRA", "KIT LEDS PORTA VASOS", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "MÓDULO TECHO SOLAR"]}, {"nombre": "Nippon Car S.R.L.", "vendedor": "Matias", "provincia": "Neuquén", "activo": true, "groups": {"Automatización de vidrios": "both", "Cámaras y visión": "both", "Alarmas y seguridad": "both", "Carga y conectividad": "combo", "Iluminación": "both", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": ["AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "ALARMA KEYLESS", "ALARMA CON CONTROL REMOTO", "CAMARAS LATERALES + 1 AV input", "KIT ILUMINACIÓN INTERNA - AMBIENT LIGHT", "CAMARAS LATERALES + 3 AV inputs", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)"]}, {"nombre": "Zento S.A.", "vendedor": "Matias", "provincia": "GBA", "activo": true, "groups": {"Automatización de vidrios": "both", "Cámaras y visión": "combo", "Alarmas y seguridad": "combo", "Carga y conectividad": "combo", "Iluminación": "combo", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": ["AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux, SW4 y Yaris)", "AUTOMACIÓN VIDRIOS + PLEG. DE ESPEJOS + TILT DOWN", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "AUTOMATIZACIÓN VIDRIOS, ESPEJOS, TECHO, TILT DOWN"]}, {"nombre": "Del Parque S.A.", "vendedor": "Matias", "provincia": "Catamarca", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "none", "Alarmas y seguridad": "individual", "Carga y conectividad": "individual", "Iluminación": "none", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["CARGADOR USB-C + INDUCTIVO (Hilux DC MT)", "ALARMA ANTIROBO DE RUEDAS + CERR. AUTOM. DE PUERTA", "Estribo Hilux CS 2016-2026", "MÓDULO PLEGAMIENTO DE ESPEJOS (2018-2026)"]}, {"nombre": "Kansai S.A.", "vendedor": "Matias", "provincia": "Capital Federal", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "individual", "Alarmas y seguridad": "individual", "Carga y conectividad": "individual", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": ["AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "ALARMA KEYLESS", "ALARMA SONORA PARA MARCHA TRAS (HIACE)", "CARGADOR USB-C + INDUCTIVO (Yaris '18-'26)", "AUTOMACIÓN VIDRIOS + PLEG. DE ESPEJOS + TILT DOWN", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux 2016-2026)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux, SW4 y Yaris)", "CAMARAS LATERALES + 3 AV inputs", "ALARMA CON CONTROL REMOTO", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)", "ALARMA ANTIROBO DE RUEDAS + CERR. AUTOM. DE PUERTA"]}, {"nombre": "Auto Prana SA", "vendedor": "Matias", "provincia": "Capital Federal", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "individual", "Alarmas y seguridad": "individual", "Carga y conectividad": "none", "Iluminación": "individual", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": ["ALARMA ANTIROBO DE RUEDAS + CERR. AUTOM. DE PUERTA", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)", "CAMARAS LATERALES + 3 AV inputs", "KIT ILUMINACIÓN INTERNA - AMBIENT LIGHT"]}, {"nombre": "Autora S.A.", "vendedor": "Hernan", "provincia": "San Luis", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "individual", "Alarmas y seguridad": "individual", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["KIT CAMARA + ARNES DEL REMOLQUE Y DEL VEHICULO", "ALARMA KEYLESS", "CAMARAS LATERALES + 3 AV inputs", "CAMARA DELANTERA CON SOPORTE (C.Cross '24-'26)", "CAMARA DELANTERA CON SOPORTE (Yaris 2018-2026)", "CAMARAS LATERALES + 1 AV input", "CAMARA DELANTERA CON SOPORTE (Corolla 2020-2026)", "CAMARA DELANTERA CON SOPORTE (SW4 '20-'26)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux 2016-2026)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux, SW4 y Yaris)", "CAMARAS LATERALES + 3 AV inputs", "CAMARAS LATERALES + 3 AV inputs", "ALARMA CON CONTROL REMOTO", "Estribo Hilux CS 2016-2026", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)"]}, {"nombre": "Derka y Vargas S.A.", "vendedor": "Matias", "provincia": "Chaco", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "none", "Alarmas y seguridad": "individual", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["Estribo Hilux CS 2016-2026", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "ALARMA KEYLESS", "ALARMA CON CONTROL REMOTO"]}, {"nombre": "Sakura", "vendedor": "Hernan", "provincia": "Santa Fé", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "none", "Alarmas y seguridad": "individual", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "ALARMA KEYLESS", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (C. Cross 2024-2026)", "ALARMA SONORA PARA MARCHA TRAS (HIACE)", "AUTOMATIZACIÓN VIDRIOS, ESPEJOS, TECHO, TILT DOWN", "AUTOMACIÓN VIDRIOS + PLEG. DE ESPEJOS + TILT DOWN", "MÓDULO PLEGAMIENTO DE ESPEJOS (2018-2026)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux 2016-2026)", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux, SW4 y Yaris)", "ALARMA CON CONTROL REMOTO", "Estribo Hilux CS 2016-2026"]}, {"nombre": "Mendez Kyoudai S.A.", "vendedor": "Hernan", "provincia": "Santa Fe", "activo": true, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "individual", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["CAMARAS LATERALES + 3 AV inputs", "Estribo Hilux CS 2016-2026", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)"]}, {"nombre": "Pichetti S.A.", "vendedor": "Hernan", "provincia": "Buenos Aires", "activo": true, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "individual", "Alarmas y seguridad": "individual", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": ["CAMARAS LATERALES + 3 AV inputs", "ALARMA KEYLESS", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)"]}, {"nombre": "TM S.A.", "vendedor": "Hernan", "provincia": "Misiones", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "none", "Alarmas y seguridad": "individual", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": ["AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "ALARMA KEYLESS"]}, {"nombre": "Fecorp S.R.L.", "vendedor": "Hernan", "provincia": "Capital Federal", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": ["KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple"]}, {"nombre": "Autosiglo S.A", "vendedor": "Matias", "provincia": "Buenos Aires", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Alem Motors S.R.L.", "vendedor": "Hernan", "provincia": "Córdoba", "activo": true, "groups": {"Automatización de vidrios": "combo", "Cámaras y visión": "combo", "Alarmas y seguridad": "combo", "Carga y conectividad": "combo", "Iluminación": "combo", "Equipamiento 4x4": "individual", "Accesorios / Confort / Estética": "none"}, "products": ["Estribo Hilux CS 2016-2026"]}, {"nombre": "Accesorios y Repuestos S.R.L.", "vendedor": "Matias", "provincia": "Capital Federal", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "BHAS S.A.", "vendedor": "Matias", "provincia": "La Pampa", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Bosetti Automotores S.R.L.", "vendedor": "Matias", "provincia": "La Rioja", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Catriel Mapú S.A.", "vendedor": "Matias", "provincia": "Buenos Aires", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Cerrito Car S.A.", "vendedor": "Hernan", "provincia": "Capital Federal", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Celentano Motors S.A.", "vendedor": "Matias", "provincia": "Tierra del Fuego", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Centro Motor S.A.", "vendedor": "Hernan", "provincia": "Córdoba", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Federico S.A.", "vendedor": "Hernan", "provincia": "Capital Federal", "activo": true, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "individual"}, "products": ["Funda para llave inteligente - Version SEG", "Funda para llave inteligente - Version XLI / XEI"]}, {"nombre": "Ginza S.A.", "vendedor": "Hernan", "provincia": "Santa Fe", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Gonzalez Gonzalez S.A", "vendedor": "Hernan", "provincia": "San Juan", "activo": true, "groups": {"Automatización de vidrios": "individual", "Cámaras y visión": "individual", "Alarmas y seguridad": "none", "Carga y conectividad": "individual", "Iluminación": "individual", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": ["KIT CAMARA + ARNES DEL REMOLQUE Y DEL VEHICULO", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "KIT LEDS PORTA VASOS", "KIT LEDS ALFOMBRA", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux 2016-2026)", "KIT ILUMINACIÓN INTERNA - AMBIENT LIGHT", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux, SW4 y Yaris)", "CONECTOR 7 PINES (Hilux CS)", "AUTOMATIZACIÓN VIDRIOS, ESPEJOS, TECHO, TILT DOWN"]}, {"nombre": "Homu S.A.", "vendedor": "Matias", "provincia": "Formosa", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Line-Up S.A.", "vendedor": "Matias", "provincia": "Tucumán", "activo": true, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "individual", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": ["CARGADOR USB-C + INDUCTIVO (Hilux DC MT)"]}, {"nombre": "Héctor Ricardo Milanesio S.A.", "vendedor": "Hernan", "provincia": "Santa Fe", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Mov S.A.", "vendedor": "Matias", "provincia": "Capital Federal", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Nuñez Autos S.A.", "vendedor": "Hernan", "provincia": "Capital Federal", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Piñeyro y Moscatelli S.R.L.", "vendedor": "Hernan", "provincia": "Entre Ríos", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Gustavo Ricciardi S.A.", "vendedor": "Hernan", "provincia": "Buenos Aires", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Sarthou Automotores SA", "vendedor": "Hernan", "provincia": "GBA", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Senna Automotores S.A.", "vendedor": "Matias", "provincia": "Santiago del Estero", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Treos Norte S.A.", "vendedor": "Hernan", "provincia": "GBA", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "Tsuyoi S.A.", "vendedor": "Matias", "provincia": "Chubut", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}, {"nombre": "TTC - Auto Argentina S.A.", "vendedor": "Hernan", "provincia": "GBA", "activo": true, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "individual", "Alarmas y seguridad": "individual", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": ["CAMARAS LATERALES + 3 AV inputs", "ALARMA KEYLESS", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)"]}, {"nombre": "Uzcudun S.A.F.I.M.", "vendedor": "Matias", "provincia": "Buenos Aires", "activo": false, "groups": {"Automatización de vidrios": "none", "Cámaras y visión": "none", "Alarmas y seguridad": "none", "Carga y conectividad": "none", "Iluminación": "none", "Equipamiento 4x4": "none", "Accesorios / Confort / Estética": "none"}, "products": []}];
 const GROUP_NAMES=["Automatización de vidrios", "Cámaras y visión", "Alarmas y seguridad", "Carga y conectividad", "Iluminación", "Equipamiento 4x4", "Accesorios / Confort / Estética"];
 const GROUP_COLORS={"Automatización de vidrios": "#378ADD", "Cámaras y visión": "#1D9E75", "Alarmas y seguridad": "#E24B4A", "Carga y conectividad": "#EF9F27", "Iluminación": "#7F77DD", "Equipamiento 4x4": "#888780", "Accesorios / Confort / Estética": "#D44FC4"};
+const STOCK_DATA=[{"codigo": "ATURY03504", "importado": 66, "facturado": 17, "pendiente": 1, "teorico": 48, "erp": 41, "diff": -7, "vel_mes": 5.7, "meses_cobertura": 7.2}, {"codigo": "ATURY03506", "importado": 10, "facturado": 4, "pendiente": 4, "teorico": 2, "erp": 6, "diff": 4, "vel_mes": 1.3, "meses_cobertura": 4.6}, {"codigo": "ATURY03507", "importado": 10, "facturado": 4, "pendiente": 4, "teorico": 2, "erp": 6, "diff": 4, "vel_mes": 1.3, "meses_cobertura": 4.6}, {"codigo": "ATURY04504", "importado": 46, "facturado": 34, "pendiente": 0, "teorico": 12, "erp": 4, "diff": -8, "vel_mes": 11.3, "meses_cobertura": 0.4}, {"codigo": "ATURY04505", "importado": 42, "facturado": 29, "pendiente": 0, "teorico": 13, "erp": 13, "diff": 0, "vel_mes": 9.7, "meses_cobertura": 1.3}, {"codigo": "ATURY04509", "importado": 40, "facturado": 16, "pendiente": 0, "teorico": 24, "erp": 6, "diff": -18, "vel_mes": 5.3, "meses_cobertura": 1.1}, {"codigo": "ATURY06503", "importado": 50, "facturado": 5, "pendiente": 1, "teorico": 44, "erp": 45, "diff": 1, "vel_mes": 1.7, "meses_cobertura": 26.5}, {"codigo": "ATURY06507", "importado": 36, "facturado": 2, "pendiente": 0, "teorico": 34, "erp": 33, "diff": -1, "vel_mes": 0.7, "meses_cobertura": 47.1}, {"codigo": "ATURY09502", "importado": 20, "facturado": 0, "pendiente": 0, "teorico": 20, "erp": 19, "diff": -1, "vel_mes": 0, "meses_cobertura": 99}, {"codigo": "ATURY09503", "importado": 10, "facturado": 5, "pendiente": 5, "teorico": 0, "erp": 5, "diff": 5, "vel_mes": 1.7, "meses_cobertura": 2.9}, {"codigo": "ATURY09504", "importado": 5, "facturado": 0, "pendiente": 0, "teorico": 5, "erp": 5, "diff": 0, "vel_mes": 0, "meses_cobertura": 99}, {"codigo": "ATURY09505", "importado": 10, "facturado": 0, "pendiente": 0, "teorico": 10, "erp": 10, "diff": 0, "vel_mes": 0, "meses_cobertura": 99}, {"codigo": "ATURY09506", "importado": 10, "facturado": 0, "pendiente": 0, "teorico": 10, "erp": 10, "diff": 0, "vel_mes": 0, "meses_cobertura": 99}, {"codigo": "ATURY09509", "importado": 5, "facturado": 0, "pendiente": 1, "teorico": 4, "erp": null, "diff": null, "vel_mes": 0, "meses_cobertura": 99}, {"codigo": "ATURY09510", "importado": 46, "facturado": 38, "pendiente": 0, "teorico": 8, "erp": 0, "diff": -8, "vel_mes": 12.7, "meses_cobertura": 99}, {"codigo": "ATURY09514", "importado": 6, "facturado": 0, "pendiente": 0, "teorico": 6, "erp": 6, "diff": 0, "vel_mes": 0, "meses_cobertura": 99}, {"codigo": "ATURY09515", "importado": 56, "facturado": 35, "pendiente": 20, "teorico": 1, "erp": 21, "diff": 20, "vel_mes": 11.7, "meses_cobertura": 1.8}, {"codigo": "ATURY09525", "importado": 5, "facturado": 5, "pendiente": 6, "teorico": -6, "erp": 0, "diff": 6, "vel_mes": 1.7, "meses_cobertura": 99}, {"codigo": "ATURY09526", "importado": 10, "facturado": 0, "pendiente": 0, "teorico": 10, "erp": null, "diff": null, "vel_mes": 0, "meses_cobertura": 99}, {"codigo": "ATURY11401", "importado": 16, "facturado": 13, "pendiente": 0, "teorico": 3, "erp": 3, "diff": 0, "vel_mes": 4.3, "meses_cobertura": 0.7}, {"codigo": "ATURY11402", "importado": 41, "facturado": 32, "pendiente": 2, "teorico": 7, "erp": 1, "diff": -6, "vel_mes": 10.7, "meses_cobertura": 0.1}, {"codigo": "ATURY11403", "importado": 41, "facturado": 33, "pendiente": 0, "teorico": 8, "erp": 0, "diff": -8, "vel_mes": 11.0, "meses_cobertura": 99}, {"codigo": "ATURY11405", "importado": 50, "facturado": 24, "pendiente": 0, "teorico": 26, "erp": 18, "diff": -8, "vel_mes": 8.0, "meses_cobertura": 2.2}, {"codigo": "ATURY11406", "importado": 380, "facturado": 99, "pendiente": 0, "teorico": 281, "erp": 273, "diff": -8, "vel_mes": 33.0, "meses_cobertura": 8.3}, {"codigo": "ATURY11409", "importado": 1, "facturado": 1, "pendiente": 3, "teorico": -3, "erp": 0, "diff": 3, "vel_mes": 0.3, "meses_cobertura": 99}, {"codigo": "ATURY11410", "importado": 6, "facturado": 6, "pendiente": 0, "teorico": 0, "erp": 0, "diff": 0, "vel_mes": 2.0, "meses_cobertura": 99}, {"codigo": "ATURY11412", "importado": 41, "facturado": 27, "pendiente": 5, "teorico": 9, "erp": 6, "diff": -3, "vel_mes": 9.0, "meses_cobertura": 0.7}, {"codigo": "ATURY11414", "importado": 41, "facturado": 17, "pendiente": 5, "teorico": 19, "erp": 16, "diff": -3, "vel_mes": 5.7, "meses_cobertura": 2.8}, {"codigo": "ATURY11415", "importado": 12, "facturado": 9, "pendiente": 0, "teorico": 3, "erp": 3, "diff": 0, "vel_mes": 3.0, "meses_cobertura": 1.0}, {"codigo": "ATURY11416", "importado": 4, "facturado": 4, "pendiente": 2, "teorico": -2, "erp": 0, "diff": 2, "vel_mes": 1.3, "meses_cobertura": 99}, {"codigo": "ATURY11417", "importado": 44, "facturado": 33, "pendiente": 1, "teorico": 10, "erp": 3, "diff": -7, "vel_mes": 11.0, "meses_cobertura": 0.3}, {"codigo": "ATURY11420", "importado": 31, "facturado": 6, "pendiente": 0, "teorico": 25, "erp": 25, "diff": 0, "vel_mes": 2.0, "meses_cobertura": 12.5}, {"codigo": "ATURY11421", "importado": 4, "facturado": 3, "pendiente": 1, "teorico": 0, "erp": 1, "diff": 1, "vel_mes": 1.0, "meses_cobertura": 1.0}, {"codigo": "ATURY11422", "importado": 70, "facturado": 17, "pendiente": 0, "teorico": 53, "erp": 45, "diff": -8, "vel_mes": 5.7, "meses_cobertura": 7.9}, {"codigo": "ATURY11501", "importado": 10, "facturado": 6, "pendiente": 8, "teorico": -4, "erp": 4, "diff": 8, "vel_mes": 2.0, "meses_cobertura": 2.0}, {"codigo": "ATURY12401", "importado": 41, "facturado": 8, "pendiente": 0, "teorico": 33, "erp": 25, "diff": -8, "vel_mes": 2.7, "meses_cobertura": 9.3}, {"codigo": "ATURY12402", "importado": 36, "facturado": 0, "pendiente": 0, "teorico": 36, "erp": 36, "diff": 0, "vel_mes": 0, "meses_cobertura": 99}, {"codigo": "ATURY12403", "importado": 37, "facturado": 28, "pendiente": 2, "teorico": 7, "erp": 1, "diff": -6, "vel_mes": 9.3, "meses_cobertura": 0.1}, {"codigo": "ATURY12404", "importado": 37, "facturado": 10, "pendiente": 0, "teorico": 27, "erp": 19, "diff": -8, "vel_mes": 3.3, "meses_cobertura": 5.8}, {"codigo": "ATURY12405", "importado": 1, "facturado": 1, "pendiente": 8, "teorico": -8, "erp": 0, "diff": 8, "vel_mes": 0.3, "meses_cobertura": 99}, {"codigo": "ATURY12406", "importado": 37, "facturado": 29, "pendiente": 9, "teorico": -1, "erp": 0, "diff": 1, "vel_mes": 9.7, "meses_cobertura": 99}, {"codigo": "ATURY12407", "importado": 1, "facturado": 1, "pendiente": 2, "teorico": -2, "erp": 0, "diff": 2, "vel_mes": 0.3, "meses_cobertura": 99}, {"codigo": "ATURY12408", "importado": 37, "facturado": 13, "pendiente": 0, "teorico": 24, "erp": 16, "diff": -8, "vel_mes": 4.3, "meses_cobertura": 3.7}, {"codigo": "ATURY12409", "importado": 37, "facturado": 3, "pendiente": 0, "teorico": 34, "erp": 26, "diff": -8, "vel_mes": 1.0, "meses_cobertura": 26.0}, {"codigo": "ATURY12410", "importado": 37, "facturado": 5, "pendiente": 0, "teorico": 32, "erp": 24, "diff": -8, "vel_mes": 1.7, "meses_cobertura": 14.1}, {"codigo": "ATURY12412", "importado": 37, "facturado": 5, "pendiente": 0, "teorico": 32, "erp": 24, "diff": -8, "vel_mes": 1.7, "meses_cobertura": 14.1}, {"codigo": "ATURY12414", "importado": 9, "facturado": 7, "pendiente": 0, "teorico": 2, "erp": 2, "diff": 0, "vel_mes": 2.3, "meses_cobertura": 0.9}, {"codigo": "ATURY12415", "importado": 45, "facturado": 29, "pendiente": 0, "teorico": 16, "erp": 8, "diff": -8, "vel_mes": 9.7, "meses_cobertura": 0.8}, {"codigo": "ATURY12416", "importado": 5, "facturado": 5, "pendiente": 5, "teorico": -5, "erp": 0, "diff": 5, "vel_mes": 1.7, "meses_cobertura": 99}, {"codigo": "ATURY12417", "importado": 5, "facturado": 5, "pendiente": 1, "teorico": -1, "erp": 0, "diff": 1, "vel_mes": 1.7, "meses_cobertura": 99}, {"codigo": "ATURY12418", "importado": 5, "facturado": 5, "pendiente": 1, "teorico": -1, "erp": 0, "diff": 1, "vel_mes": 1.7, "meses_cobertura": 99}, {"codigo": "ATURY12419", "importado": 5, "facturado": 5, "pendiente": 0, "teorico": 0, "erp": 0, "diff": 0, "vel_mes": 1.7, "meses_cobertura": 99}, {"codigo": "ATURY12420", "importado": 1, "facturado": 0, "pendiente": 0, "teorico": 1, "erp": 1, "diff": 0, "vel_mes": 0, "meses_cobertura": 99}, {"codigo": "ATURY12423", "importado": 80, "facturado": 32, "pendiente": 4, "teorico": 44, "erp": 48, "diff": 4, "vel_mes": 10.7, "meses_cobertura": 4.5}, {"codigo": "ATURY12424", "importado": 46, "facturado": 36, "pendiente": 15, "teorico": -5, "erp": 10, "diff": 15, "vel_mes": 12.0, "meses_cobertura": 0.8}, {"codigo": "ATURY12510", "importado": 15, "facturado": 6, "pendiente": 6, "teorico": 3, "erp": 9, "diff": 6, "vel_mes": 2.0, "meses_cobertura": 4.5}, {"codigo": "ATURY12513", "importado": 15, "facturado": 6, "pendiente": 6, "teorico": 3, "erp": 9, "diff": 6, "vel_mes": 2.0, "meses_cobertura": 4.5}];
+const EVOL_CLIENTE={"Alem Sur S.A.": {"2026-01": {"importe": 4350116, "uds": 3}}, "Amiun S.A.": {"2026-02": {"importe": 3267017, "uds": 19}, "2026-03": {"importe": 2429034, "uds": 12}, "2026-04": {"importe": 238189, "uds": 1}}, "Asahi Motors S.A.": {"2026-02": {"importe": 3652732, "uds": 1}, "2026-04": {"importe": 1505421, "uds": 2}}, "Audec S.A.": {"2026-02": {"importe": 955625, "uds": 5}, "2026-03": {"importe": 418653, "uds": 2}, "2026-04": {"importe": 903846, "uds": 4}}, "AUTO PRANA S.A.": {"2026-02": {"importe": 656842, "uds": 3}, "2026-03": {"importe": 1631042, "uds": 8}, "2026-04": {"importe": 487228, "uds": 2}}, "Autolux S.A.": {"2026-02": {"importe": 3521677, "uds": 12}, "2026-03": {"importe": 4119940, "uds": 16}, "2026-04": {"importe": 1125917, "uds": 12}}, "Autonort S.A.": {"2026-01": {"importe": 5608678, "uds": 8}, "2026-02": {"importe": 4350116, "uds": 3}, "2026-03": {"importe": 10950353, "uds": 54}, "2026-04": {"importe": 11183703, "uds": 40}}, "AUTORA SA": {"2026-02": {"importe": 4443796, "uds": 22}, "2026-03": {"importe": 2145903, "uds": 11}}, "Autos del Sur S.A.": {"2026-01": {"importe": 2298141, "uds": 15}, "2026-02": {"importe": 14958313, "uds": 70}, "2026-03": {"importe": 9200986, "uds": 48}, "2026-04": {"importe": 3093573, "uds": 21}}, "Catriel Mapu S.A.": {"2026-04": {"importe": 899032, "uds": 2}}, "CELENTANO MOTORS SA": {"2026-04": {"importe": 2351915, "uds": 12}}, "Cerrito Car S.A.": {"2026-04": {"importe": 1344199, "uds": 7}}, "TOYOTA - DEL PARQUE S.A.": {"2026-02": {"importe": 476432, "uds": 3}, "2026-03": {"importe": 168427, "uds": 1}}, "Derka y Vargas S.A.": {"2026-03": {"importe": 3484586, "uds": 9}, "2026-04": {"importe": 787489, "uds": 3}}, "TOYOTA - FECORP SRL": {"2026-03": {"importe": 752711, "uds": 1}}, "Federico S.A.": {"2026-04": {"importe": 191127, "uds": 2}}, "TOYOTA - GONZALEZ GONZALEZ S. A.": {"2026-03": {"importe": 1182126, "uds": 6}}, "Gustavo Ricciardi S.A.": {"2026-04": {"importe": 68490, "uds": 1}}, "Haimovich Parana S.A.": {"2026-02": {"importe": 7532120, "uds": 40}, "2026-04": {"importe": 450524, "uds": 5}}, "Kansai S.A.": {"2026-01": {"importe": 2108312, "uds": 14}, "2026-02": {"importe": 163935, "uds": 1}, "2026-03": {"importe": 4691774, "uds": 34}, "2026-04": {"importe": 1069476, "uds": 11}}, "TOYOTA - LINE UP S A": {"2026-03": {"importe": 168427, "uds": 1}}, "TOYOTA - MENDEZ KYOUDAI S.A.": {"2026-03": {"importe": 767345, "uds": 3}}, "Mov S.A.": {"2026-04": {"importe": 6843987, "uds": 42}}, "Nippon Car S.R.L.": {"2026-02": {"importe": 9087049, "uds": 16}, "2026-03": {"importe": 3768675, "uds": 12}, "2026-04": {"importe": 5744358, "uds": 13}}, "TOYOTA - OLIVIERI": {"2026-02": {"importe": 90105, "uds": 1}, "2026-03": {"importe": 1401754, "uds": 14}}, "TOYOTA - PICHETTI S A": {"2026-03": {"importe": 508758, "uds": 3}}, "SAKURA MOTORS SA": {"2026-02": {"importe": 3442113, "uds": 20}, "2026-03": {"importe": 1201471, "uds": 5}, "2026-04": {"importe": 270315, "uds": 3}}, "TM S.A.": {"2026-01": {"importe": 513928, "uds": 4}}, "TOYOTA - TTC AUTO ARGENTINA S A": {"2026-03": {"importe": 1377935, "uds": 10}}, "Uzcudun S.A.F.I.M.": {"2026-04": {"importe": 487143, "uds": 3}}, "Yacopini Inversora S.A.": {"2026-02": {"importe": 7320425, "uds": 30}, "2026-03": {"importe": 1067958, "uds": 6}, "2026-04": {"importe": 1353523, "uds": 6}}, "Zento S.A.": {"2026-02": {"importe": 3652732, "uds": 1}, "2026-03": {"importe": 5050281, "uds": 25}, "2026-04": {"importe": 1705296, "uds": 7}}};
+const EVOL_PROD={"ATURY03504": {"2026-02": {"importe": 2694840, "uds": 16}, "2026-04": {"importe": 168427, "uds": 1}}, "ATURY03506": {"2026-04": {"importe": 2931231, "uds": 4}}, "ATURY03507": {"2026-04": {"importe": 282978, "uds": 4}}, "ATURY04504": {"2026-01": {"importe": 1505421, "uds": 2}, "2026-02": {"importe": 6021685, "uds": 8}, "2026-03": {"importe": 9032527, "uds": 12}, "2026-04": {"importe": 9032527, "uds": 12}}, "ATURY04505": {"2026-01": {"importe": 697384, "uds": 2}, "2026-02": {"importe": 4881687, "uds": 14}, "2026-03": {"importe": 3835611, "uds": 11}, "2026-04": {"importe": 697384, "uds": 2}}, "ATURY04509": {"2026-02": {"importe": 1272742, "uds": 5}, "2026-03": {"importe": 2800033, "uds": 11}}, "ATURY06503": {"2026-04": {"importe": 3314300, "uds": 5}}, "ATURY06507": {"2026-02": {"importe": 29581, "uds": 1}, "2026-03": {"importe": 29581, "uds": 1}}, "ATURY09503": {"2026-04": {"importe": 481294, "uds": 5}}, "ATURY09510": {"2026-01": {"importe": 292644, "uds": 2}, "2026-02": {"importe": 1463219, "uds": 10}, "2026-03": {"importe": 2194828, "uds": 15}, "2026-04": {"importe": 1609541, "uds": 11}}, "ATURY09515": {"2026-01": {"importe": 243876, "uds": 2}, "2026-02": {"importe": 487752, "uds": 4}, "2026-03": {"importe": 3536201, "uds": 29}}, "ATURY09525": {"2026-04": {"importe": 604966, "uds": 5}}, "ATURY11401": {"2026-02": {"importe": 820946, "uds": 5}, "2026-03": {"importe": 1313514, "uds": 8}}, "ATURY11402": {"2026-02": {"importe": 1364712, "uds": 7}, "2026-03": {"importe": 4289094, "uds": 22}, "2026-04": {"importe": 584876, "uds": 3}}, "ATURY11403": {"2026-01": {"importe": 730841, "uds": 3}, "2026-02": {"importe": 2192524, "uds": 9}, "2026-03": {"importe": 3166979, "uds": 13}, "2026-04": {"importe": 1948910, "uds": 8}}, "ATURY11405": {"2026-01": {"importe": 147491, "uds": 2}, "2026-02": {"importe": 294981, "uds": 4}, "2026-03": {"importe": 884943, "uds": 12}, "2026-04": {"importe": 442472, "uds": 6}}, "ATURY11406": {"2026-01": {"importe": 1261468, "uds": 14}, "2026-02": {"importe": 3063566, "uds": 34}, "2026-03": {"importe": 1711993, "uds": 19}, "2026-04": {"importe": 2703146, "uds": 32}}, "ATURY11409": {"2026-02": {"importe": 163935, "uds": 1}}, "ATURY11410": {"2026-02": {"importe": 71880, "uds": 1}, "2026-04": {"importe": 359402, "uds": 5}}, "ATURY11412": {"2026-02": {"importe": 1147545, "uds": 7}, "2026-03": {"importe": 1639349, "uds": 10}, "2026-04": {"importe": 1639349, "uds": 10}}, "ATURY11414": {"2026-02": {"importe": 327870, "uds": 2}, "2026-03": {"importe": 819675, "uds": 5}, "2026-04": {"importe": 1639349, "uds": 10}}, "ATURY11415": {"2026-02": {"importe": 437216, "uds": 2}, "2026-04": {"importe": 1530257, "uds": 7}}, "ATURY11416": {"2026-02": {"importe": 243614, "uds": 1}, "2026-03": {"importe": 487228, "uds": 2}, "2026-04": {"importe": 243614, "uds": 1}}, "ATURY11417": {"2026-01": {"importe": 974455, "uds": 4}, "2026-02": {"importe": 1218069, "uds": 5}, "2026-03": {"importe": 2679751, "uds": 11}, "2026-04": {"importe": 3166979, "uds": 13}}, "ATURY11420": {"2026-02": {"importe": 985135, "uds": 6}}, "ATURY11421": {"2026-02": {"importe": 73745, "uds": 1}, "2026-03": {"importe": 147491, "uds": 2}}, "ATURY11422": {"2026-01": {"importe": 53995, "uds": 1}, "2026-02": {"importe": 485956, "uds": 9}, "2026-03": {"importe": 377966, "uds": 7}}, "ATURY11501": {"2026-04": {"importe": 1067730, "uds": 6}}, "ATURY12401": {"2026-02": {"importe": 155204, "uds": 1}, "2026-03": {"importe": 310408, "uds": 2}, "2026-04": {"importe": 776021, "uds": 5}}, "ATURY12403": {"2026-01": {"importe": 350163, "uds": 1}, "2026-02": {"importe": 2801304, "uds": 8}, "2026-03": {"importe": 6302934, "uds": 18}, "2026-04": {"importe": 350163, "uds": 1}}, "ATURY12404": {"2026-02": {"importe": 2801304, "uds": 8}, "2026-04": {"importe": 700326, "uds": 2}}, "ATURY12405": {"2026-02": {"importe": 350163, "uds": 1}}, "ATURY12406": {"2026-01": {"importe": 136980, "uds": 2}, "2026-02": {"importe": 479429, "uds": 7}, "2026-03": {"importe": 1369798, "uds": 20}}, "ATURY12407": {"2026-02": {"importe": 68490, "uds": 1}}, "ATURY12408": {"2026-02": {"importe": 273960, "uds": 4}, "2026-03": {"importe": 68490, "uds": 1}, "2026-04": {"importe": 547919, "uds": 8}}, "ATURY12409": {"2026-02": {"importe": 205470, "uds": 3}}, "ATURY12410": {"2026-02": {"importe": 342449, "uds": 5}}, "ATURY12412": {"2026-02": {"importe": 1050489, "uds": 3}, "2026-03": {"importe": 700326, "uds": 2}}, "ATURY12414": {"2026-02": {"importe": 1557975, "uds": 5}, "2026-03": {"importe": 623190, "uds": 2}}, "ATURY12415": {"2026-02": {"importe": 1905511, "uds": 8}, "2026-03": {"importe": 1429133, "uds": 6}, "2026-04": {"importe": 3572832, "uds": 15}}, "ATURY12416": {"2026-02": {"importe": 442896, "uds": 5}}, "ATURY12417": {"2026-02": {"importe": 110194, "uds": 5}}, "ATURY12418": {"2026-02": {"importe": 110194, "uds": 5}}, "ATURY12419": {"2026-02": {"importe": 56284, "uds": 1}, "2026-04": {"importe": 225135, "uds": 4}}, "ATURY12423": {"2026-01": {"importe": 168427, "uds": 1}, "2026-02": {"importe": 3200122, "uds": 19}, "2026-03": {"importe": 1684275, "uds": 10}, "2026-04": {"importe": 336855, "uds": 2}}, "ATURY12424": {"2026-01": {"importe": 1010565, "uds": 6}, "2026-03": {"importe": 5052824, "uds": 30}}, "ATURY12510": {"2026-04": {"importe": 573382, "uds": 6}}, "ATURY12513": {"2026-04": {"importe": 573382, "uds": 6}}, "CS0640TURY01": {"2026-01": {"importe": 7305465, "uds": 2}, "2026-02": {"importe": 21916394, "uds": 6}}};
 const ALL_CONCS=[{"nombre": "Federico S.A.", "vendedor": "Hernan", "provincia": "Buenos Aires", "total_ars": 191127, "n_ordenes": 1, "ultima": "2026-03-27", "n_prods": 2, "dias_sin_compra": 3, "activo": true}, {"nombre": "Sakura Motors S.A.", "vendedor": "Hernan", "provincia": "Santa Fe", "total_ars": 4643584, "n_ordenes": 3, "ultima": "2026-03-12", "n_prods": 13, "dias_sin_compra": 18, "activo": true}, {"nombre": "Uzcudun S.A.F.I.M.", "vendedor": "Matias", "provincia": "Bs. As.", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "BHAS S.A.", "vendedor": "Matias", "provincia": "La Pampa", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "TM S.A.", "vendedor": "Hernan", "provincia": "Misiones", "total_ars": 513928, "n_ordenes": 1, "ultima": "2026-01-22", "n_prods": 2, "dias_sin_compra": 67, "activo": true}, {"nombre": "Amiun S.A.", "vendedor": "Hernan", "provincia": "Santa Fe", "total_ars": 7204804, "n_ordenes": 6, "ultima": "2026-03-27", "n_prods": 20, "dias_sin_compra": 3, "activo": true}, {"nombre": "Héctor Milanesio S.R.L.", "vendedor": "Hernan", "provincia": "Santa Fe", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Pichetti S.A.", "vendedor": "Hernan", "provincia": "Buenos Aires", "total_ars": 508757, "n_ordenes": 1, "ultima": "2026-03-02", "n_prods": 3, "dias_sin_compra": 28, "activo": true}, {"nombre": "Alem Motors S.R.L.", "vendedor": "Hernan", "provincia": "Cordoba", "total_ars": 4350116, "n_ordenes": 3, "ultima": "2026-01-27", "n_prods": 2, "dias_sin_compra": 62, "activo": true}, {"nombre": "Autosiglo S.A", "vendedor": "Matias", "provincia": "Buenos Aires", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Line-Up S.A.", "vendedor": "Matias", "provincia": "S.M. De Tucuman", "total_ars": 168427, "n_ordenes": 1, "ultima": "2026-03-25", "n_prods": 1, "dias_sin_compra": 5, "activo": true}, {"nombre": "Catriel Mapú S.A.", "vendedor": "Matias", "provincia": "Buenos Aires", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Centro Motor S.A.", "vendedor": "Hernan", "provincia": "Cordoba", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Cerrito Car S.A.", "vendedor": "Hernan", "provincia": "Buenos Aires", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Tsuyoi S.A.", "vendedor": "Matias", "provincia": "Chubut", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Derka y Vargas S.A.", "vendedor": "Matias", "provincia": "Chaco", "total_ars": 3484586, "n_ordenes": 2, "ultima": "2026-03-27", "n_prods": 4, "dias_sin_compra": 3, "activo": true}, {"nombre": "Sarthou Automotores S.A.", "vendedor": "Hernan", "provincia": "Gba", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Autos del Sur S.A.", "vendedor": "Matias", "provincia": "Chubut", "total_ars": 26457440, "n_ordenes": 10, "ultima": "2026-03-06", "n_prods": 28, "dias_sin_compra": 24, "activo": true}, {"nombre": "Nippon Car S.R.L.", "vendedor": "Matias", "provincia": "Neuquen", "total_ars": 12924213, "n_ordenes": 3, "ultima": "2026-03-16", "n_prods": 9, "dias_sin_compra": 14, "activo": true}, {"nombre": "Kansai S.A.", "vendedor": "Matias", "provincia": "Capital Federal", "total_ars": 7314184, "n_ordenes": 5, "ultima": "2026-03-09", "n_prods": 13, "dias_sin_compra": 21, "activo": true}, {"nombre": "Treos Investments S.A.", "vendedor": "Hernan", "provincia": "Bs. As.", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Accesorios y Repuestos S.R.L.", "vendedor": "Matias", "provincia": "Buenos Aires", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Nuñez Autos S.A.", "vendedor": "Hernan", "provincia": "Buenos Aires", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Asahi Motors S.A.", "vendedor": "Hernan", "provincia": "Gba", "total_ars": 3652732, "n_ordenes": 1, "ultima": "2026-02-25", "n_prods": 1, "dias_sin_compra": 33, "activo": true}, {"nombre": "TTC - Auto Argentina S.A.", "vendedor": "Hernan", "provincia": "Gba", "total_ars": 1377935, "n_ordenes": 3, "ultima": "2026-03-18", "n_prods": 3, "dias_sin_compra": 12, "activo": true}, {"nombre": "Autorosario S.A.", "vendedor": "Hernan", "provincia": "Santa Fe", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Autolux S.A.", "vendedor": "Matias", "provincia": "Salta", "total_ars": 8834832, "n_ordenes": 5, "ultima": "2026-03-26", "n_prods": 14, "dias_sin_compra": 4, "activo": true}, {"nombre": "Mov S.A.", "vendedor": "Matias", "provincia": "Buenos Aires", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Yacopini Inversora S.A.", "vendedor": "Hernan", "provincia": "Mendoza", "total_ars": 8388383, "n_ordenes": 1, "ultima": "2026-02-09", "n_prods": 18, "dias_sin_compra": 49, "activo": true}, {"nombre": "Gonzalez Gonzalez S.A", "vendedor": "Hernan", "provincia": "San Juan", "total_ars": 1456679, "n_ordenes": 1, "ultima": "2026-03-19", "n_prods": 9, "dias_sin_compra": 11, "activo": true}, {"nombre": "Piñeyro y Moscatelli S.R.L.", "vendedor": "Hernan", "provincia": "Entre Rios", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Celentano Motors S.A.", "vendedor": "Matias", "provincia": "Tierra Del Fuego", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Fecorp S.R.L.", "vendedor": "Hernan", "provincia": "Buenos Aires", "total_ars": 752710, "n_ordenes": 1, "ultima": "2026-03-05", "n_prods": 1, "dias_sin_compra": 25, "activo": true}, {"nombre": "Haimovich Paraná S.A.", "vendedor": "Hernan", "provincia": "Parana", "total_ars": 7784633, "n_ordenes": 3, "ultima": "2026-02-23", "n_prods": 14, "dias_sin_compra": 35, "activo": true}, {"nombre": "Senna Automotores S.A.", "vendedor": "Matias", "provincia": "Santiago Del Estero", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Autora S.A.", "vendedor": "Hernan", "provincia": "San Luis", "total_ars": 7213821, "n_ordenes": 3, "ultima": "2026-03-20", "n_prods": 15, "dias_sin_compra": 10, "activo": true}, {"nombre": "Mendez Kyoudai S.A.", "vendedor": "Hernan", "provincia": "Santa Fe", "total_ars": 767344, "n_ordenes": 2, "ultima": "2026-03-05", "n_prods": 3, "dias_sin_compra": 25, "activo": true}, {"nombre": "Bosetti Automotores S.R.L.", "vendedor": "Matias", "provincia": "La Rioja", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Ginza S.A.", "vendedor": "Hernan", "provincia": "Rosario", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Audec S.A.", "vendedor": "Hernan", "provincia": "Corrientes", "total_ars": 1374278, "n_ordenes": 2, "ultima": "2026-03-04", "n_prods": 7, "dias_sin_compra": 26, "activo": true}, {"nombre": "Zento S.A.", "vendedor": "Matias", "provincia": "Gba.", "total_ars": 8703013, "n_ordenes": 2, "ultima": "2026-03-11", "n_prods": 5, "dias_sin_compra": 19, "activo": true}, {"nombre": "Del Parque S.A.", "vendedor": "Matias", "provincia": "San Fernando Del Valle De Catamarca", "total_ars": 644859, "n_ordenes": 1, "ultima": "2026-02-18", "n_prods": 4, "dias_sin_compra": 40, "activo": true}, {"nombre": "TOYOTA OLIVIERI", "vendedor": "Hernan", "provincia": "Ciudadela", "total_ars": 1491858, "n_ordenes": 4, "ultima": "2026-03-09", "n_prods": 4, "dias_sin_compra": 21, "activo": true}, {"nombre": "Autonort S.A.", "vendedor": "Hernan", "provincia": "Buenos Aires", "total_ars": 25664921, "n_ordenes": 11, "ultima": "2026-03-27", "n_prods": 20, "dias_sin_compra": 3, "activo": true}, {"nombre": "Gustavo Ricciardi S.A.", "vendedor": "Hernan", "provincia": "Buenos Aires", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}, {"nombre": "Auto Prana S.A.", "vendedor": "Matias", "provincia": "Buenos Aires", "total_ars": 2378412, "n_ordenes": 9, "ultima": "2026-03-25", "n_prods": 7, "dias_sin_compra": 5, "activo": true}, {"nombre": "Homu S.A.", "vendedor": "Matias", "provincia": "Formosa", "total_ars": 0, "n_ordenes": 0, "ultima": "—", "n_prods": 0, "dias_sin_compra": 999, "activo": false}];
 const TOP12=["ALARMA KEYLESS", "AUTOMACIÓN VIDRIOS ELÉCTRICOS + PLEG. DE ESPEJOS", "CAMARAS LATERALES + 3 AV inputs", "ALARMA SONORA PARA MARCHA TRAS (HIACE)", "CARGADOR USB-C + INDUCTIVO (Yaris '18-'26)", "CAMARA DELANTERA CON SOPORTE (Hilux '20-'26)", "CARGADOR USB-C + INDUCTIVO (Hilux DC MT)", "ALARMA CON CONTROL REMOTO", "Estribo Hilux CS 2016-2026", "AUTOMACIÓN VIDRIOS ELÉCTRICOS (Hilux, SW4 y Yaris)", "KIT VIDRIOS + CIERRE CENTRALIZADO (Hilux C. Simple", "CARGADOR USB-C + INDUCTIVO (Corolla '21-'26)", "ALARMA ANTIROBO DE RUEDAS + CERR. AUTOM. DE PUERTA", "AUTOMATIZACIÓN VIDRIOS, ESPEJOS, TECHO, TILT DOWN", "KIT ILUMINACIÓN INTERNA - AMBIENT LIGHT"];
 
-const DEMO={
-  generado:new Date().toISOString(),
-  kpis:{total_ventas:133226094,total_unidades:537,total_concesionarios:23,total_productos:34,ticket_promedio:516380,mes_actual_ventas:38040518,mes_actual_unidades:168,mes_actual_label:"2026-03",mes_anterior_ventas:75811532,mes_anterior_unidades:319,costo_estimado_total:46628133,flete_a_cargo_total:1850000},
-  evolucion:[{mes:"2026-01",ventas:19374044,unidades:50},{mes:"2026-02",ventas:75811532,unidades:319},{mes:"2026-03",ventas:38040518,unidades:168}],
-  topConc:[
-    {nombre:"Autos del Sur S.A.",importe:26457440,unidades:133,ordenes:54,ultima:"2026-03-06",vendedor:"Matias"},
-    {nombre:"Autonort S.A.",importe:17869485,unidades:43,ordenes:14,ultima:"2026-03-17",vendedor:"Hernan"},
-    {nombre:"Nippon Car S.R.L.",importe:12924214,unidades:29,ordenes:10,ultima:"2026-03-16",vendedor:"Matias"},
-    {nombre:"Zento S.A.",importe:8703014,unidades:26,ordenes:5,ultima:"2026-03-11",vendedor:"Matias"},
-    {nombre:"Yacopini Inversora S.A.",importe:8388384,unidades:36,ordenes:18,ultima:"2026-02-09",vendedor:"Hernan"},
-    {nombre:"Haimovich Parana S.A.",importe:7784634,unidades:42,ordenes:19,ultima:"2026-02-23",vendedor:"Hernan"},
-    {nombre:"Autolux S.A.",importe:7641617,unidades:28,ordenes:14,ultima:"2026-03-17",vendedor:"Matias"},
-    {nombre:"Kansai S.A.",importe:7314184,unidades:50,ordenes:16,ultima:"2026-03-09",vendedor:"Matias"},
-    {nombre:"Amiun S.A.",importe:6101792,unidades:30,ordenes:28,ultima:"2026-03-13",vendedor:"Hernan"},
-    {nombre:"AUTORA SA",importe:5418081,unidades:28,ordenes:15,ultima:"2026-03-17",vendedor:"Hernan"}
-  ],
-  topProd:[
-    {nombre:"Kit combo inicial",importe:29221859,unidades:8,ordenes:7,ultima:"2026-02-25"},
-    {nombre:"KIT VIDRIOS + CIERRE CENTRALIZADO",importe:16139154,unidades:23,ordenes:16,ultima:"2026-03-17"},
-    {nombre:"CAMARAS LATERALES + 3 AV inputs",importe:13656357,unidades:39,ordenes:29,ultima:"2026-03-19"},
-    {nombre:"AUTOMACION VIDRIOS + PLEG. ESPEJOS",importe:11449847,unidades:47,ordenes:20,ultima:"2026-03-16"},
-    {nombre:"Estribo Hilux CS 2016-2026",importe:9065991,unidades:26,ordenes:18,ultima:"2026-03-17"},
-    {nombre:"ALARMA KEYLESS",importe:5946922,unidades:66,ordenes:21,ultima:"2026-03-18"},
-    {nombre:"CARGADOR USB-C Yaris",importe:5894961,unidades:35,ordenes:8,ultima:"2026-03-04"},
-    {nombre:"CARGADOR USB-C Hilux DC MT",importe:4715969,unidades:28,ordenes:8,ultima:"2026-03-04"},
-    {nombre:"AUTOMACION VIDRIOS Hilux SW4 Yaris",importe:4484053,unidades:23,ordenes:8,ultima:"2026-03-17"},
-    {nombre:"ALARMA SONORA MARCHA ATRAS",importe:4267829,unidades:35,ordenes:8,ultima:"2026-03-03"}
-  ],
-  sinMovimiento:[
-    {nombre:"AUTOMACION VIDRIOS Etios 2015-2023",ultima:"2026-02-03",dias:45},
-    {nombre:"AUTOMACION VIDRIOS Yaris 2018-2026",ultima:"2026-02-03",dias:45},
-    {nombre:"CAMARA DELANTERA SW4",ultima:"2026-02-10",dias:38},
-    {nombre:"MODULO TECHO SOLAR",ultima:"2026-02-12",dias:36},
-    {nombre:"KIT LEDS PORTA VASOS",ultima:"2026-02-12",dias:36},
-    {nombre:"MODULO PLEGAMIENTO ESPEJOS",ultima:"2026-02-20",dias:28},
-    {nombre:"KIT LEDS ALFOMBRA",ultima:"2026-02-23",dias:25},
-    {nombre:"KIT LED MANIJAS",ultima:"2026-02-23",dias:25}
-  ],
-  recency:[
-    {concesionario:"TM S.A.",ultima_compra:"2026-01-22",dias_sin_compra:57,vendedor:"Hernan"},
-    {concesionario:"Alem Sur S.A.",ultima_compra:"2026-01-27",dias_sin_compra:52,vendedor:"Hernan"},
-    {concesionario:"Yacopini Inversora S.A.",ultima_compra:"2026-02-09",dias_sin_compra:39,vendedor:"Hernan"},
-    {concesionario:"Del Parque S.A.",ultima_compra:"2026-02-18",dias_sin_compra:30,vendedor:"Matias"},
-    {concesionario:"Haimovich Parana S.A.",ultima_compra:"2026-02-23",dias_sin_compra:25,vendedor:"Hernan"},
-    {concesionario:"Asahi Motors S.A.",ultima_compra:"2026-02-25",dias_sin_compra:23,vendedor:"Hernan"},
-    {concesionario:"Pichetti S.A.",ultima_compra:"2026-03-02",dias_sin_compra:18,vendedor:"Hernan"},
-    {concesionario:"Kansai S.A.",ultima_compra:"2026-03-09",dias_sin_compra:11,vendedor:"Matias"},
-    {concesionario:"Autonort S.A.",ultima_compra:"2026-03-17",dias_sin_compra:3,vendedor:"Hernan"},
-    {concesionario:"AUTO PRANA S.A.",ultima_compra:"2026-03-19",dias_sin_compra:1,vendedor:"Matias"}
-  ],
-  velocity:[
-    {nombre:"ALARMA KEYLESS",total_units:66,months:3,avg_monthly:22},
-    {nombre:"AUTOMACION VIDRIOS + PLEG. ESPEJOS",total_units:47,months:3,avg_monthly:15.7},
-    {nombre:"CAMARAS LATERALES + 3 AV inputs",total_units:39,months:3,avg_monthly:13},
-    {nombre:"ALARMA SONORA MARCHA ATRAS",total_units:35,months:3,avg_monthly:11.7},
-    {nombre:"CARGADOR USB-C Yaris",total_units:35,months:3,avg_monthly:11.7},
-    {nombre:"CAMARA DELANTERA Hilux",total_units:33,months:3,avg_monthly:11},
-    {nombre:"CARGADOR USB-C Hilux DC MT",total_units:28,months:3,avg_monthly:9.3},
-    {nombre:"ALARMA CON CONTROL REMOTO",total_units:26,months:3,avg_monthly:8.7},
-    {nombre:"Estribo Hilux CS 2016-2026",total_units:26,months:3,avg_monthly:8.7},
-    {nombre:"KIT VIDRIOS + CIERRE CENTRALIZADO",total_units:23,months:3,avg_monthly:7.7},
-    {nombre:"KIT ILUMINACION AMBIENT LIGHT",total_units:12,months:2,avg_monthly:6},
-    {nombre:"LOGOTIPO FRONTAL LED",total_units:11,months:2,avg_monthly:5.5}
-  ],
-  vendedores:[
-    {vendedor:"Matias",ventas:68230473,unidades:220,ordenes:116,concesionarios_activos:8,margen:8500000},
-    {vendedor:"Hernan",ventas:63503763,unidades:317,ordenes:135,concesionarios_activos:14,margen:7800000}
-  ],
-  mensual_por_vendedor:[
-    {mes:"2026-01",vendedor:"Matias",ventas:9200000,unidades:24},
-    {mes:"2026-01",vendedor:"Hernan",ventas:10174044,unidades:26},
-    {mes:"2026-02",vendedor:"Matias",ventas:35500000,unidades:120},
-    {mes:"2026-02",vendedor:"Hernan",ventas:40311532,unidades:199},
-    {mes:"2026-03",vendedor:"Matias",ventas:23530473,unidades:76},
-    {mes:"2026-03",vendedor:"Hernan",ventas:13003763,unidades:92}
-  ]
-};
+const DEMO={"generado": "2026-04-25T00:00:00", "kpis": {"total_ventas": 181043097, "total_unidades": 771, "total_productos": 48, "mes_actual_ventas": 42104751, "mes_actual_unidades": 199, "mes_actual_label": "2026-04", "mes_anterior_ventas": 56488141, "mes_anterior_unidades": 281, "ticket_promedio": 1508692}, "evolucion": [{"mes": "2026-01", "ventas": 14879175, "unidades": 44}, {"mes": "2026-02", "ventas": 67571031, "unidades": 247}, {"mes": "2026-03", "ventas": 56488141, "unidades": 281}, {"mes": "2026-04", "ventas": 42104751, "unidades": 199}], "topConc": [{"nombre": "Autonort S.A.", "importe": 32092850, "unidades": 105, "ordenes": 14, "ultima": "2026-04-23", "vendedor": "Hernan"}, {"nombre": "Autos del Sur S.A.", "importe": 29551013, "unidades": 154, "ordenes": 16, "ultima": "2026-04-16", "vendedor": "Matias"}, {"nombre": "Nippon Car S.R.L.", "importe": 18600082, "unidades": 41, "ordenes": 4, "ultima": "2026-04-22", "vendedor": "Matias"}, {"nombre": "Zento S.A.", "importe": 10408310, "unidades": 33, "ordenes": 3, "ultima": "2026-04-08", "vendedor": "Matias"}, {"nombre": "Yacopini Inversora S.A.", "importe": 9741907, "unidades": 42, "ordenes": 4, "ultima": "2026-04-20", "vendedor": "Hernan"}, {"nombre": "Autolux S.A.", "importe": 8767534, "unidades": 40, "ordenes": 8, "ultima": "2026-04-16", "vendedor": "Matias"}, {"nombre": "Kansai S.A.", "importe": 8033497, "unidades": 60, "ordenes": 7, "ultima": "2026-04-22", "vendedor": "Matias"}, {"nombre": "Haimovich Parana S.A.", "importe": 7982644, "unidades": 45, "ordenes": 4, "ultima": "2026-04-22", "vendedor": "—"}, {"nombre": "Mov S.A.", "importe": 6843987, "unidades": 42, "ordenes": 3, "ultima": "2026-04-20", "vendedor": "Matias"}, {"nombre": "AUTORA SA", "importe": 6589699, "unidades": 33, "ordenes": 3, "ultima": "2026-03-23", "vendedor": "—"}], "topProd": [{"nombre": "Combos", "importe": 29221859, "unidades": 8, "ordenes": 7, "ultima": "2026-02-26"}, {"nombre": "ATURY04504", "importe": 25592160, "unidades": 34, "ordenes": 19, "ultima": "2026-04-23"}, {"nombre": "ATURY04505", "importe": 10112066, "unidades": 29, "ordenes": 19, "ultima": "2026-04-20"}, {"nombre": "ATURY12403", "importe": 9804564, "unidades": 28, "ordenes": 22, "ultima": "2026-04-14"}, {"nombre": "ATURY11406", "importe": 8740173, "unidades": 99, "ordenes": 30, "ultima": "2026-04-22"}, {"nombre": "ATURY11403", "importe": 8039254, "unidades": 33, "ordenes": 13, "ultima": "2026-04-08"}, {"nombre": "ATURY11417", "importe": 8039254, "unidades": 33, "ordenes": 14, "ultima": "2026-04-20"}, {"nombre": "ATURY12415", "importe": 6907476, "unidades": 29, "ordenes": 17, "ultima": "2026-04-20"}, {"nombre": "ATURY11402", "importe": 6238682, "unidades": 32, "ordenes": 12, "ultima": "2026-04-20"}, {"nombre": "ATURY12424", "importe": 6063389, "unidades": 36, "ordenes": 10, "ultima": "2026-03-12"}], "sinMovimiento": [{"nombre": "ATURY12402", "ultima": "—", "dias": 999}, {"nombre": "ATURY09514", "ultima": "—", "dias": 999}, {"nombre": "ATURY12420", "ultima": "—", "dias": 999}, {"nombre": "ATURY09502", "ultima": "—", "dias": 999}, {"nombre": "ATURY09504", "ultima": "—", "dias": 999}, {"nombre": "ATURY09505", "ultima": "—", "dias": 999}, {"nombre": "ATURY09506", "ultima": "—", "dias": 999}, {"nombre": "ATURY11420", "ultima": "2026-02-09", "dias": 75}, {"nombre": "ATURY12407", "ultima": "2026-02-09", "dias": 75}, {"nombre": "ATURY11409", "ultima": "2026-02-19", "dias": 65}], "recency": [{"concesionario": "Federico S.A.", "ultima_compra": "2026-03-27", "dias_sin_compra": 3, "vendedor": "Hernan"}, {"concesionario": "Amiun S.A.", "ultima_compra": "2026-03-27", "dias_sin_compra": 3, "vendedor": "Hernan"}, {"concesionario": "Derka y Vargas S.A.", "ultima_compra": "2026-03-27", "dias_sin_compra": 3, "vendedor": "Matias"}, {"concesionario": "Autonort S.A.", "ultima_compra": "2026-03-27", "dias_sin_compra": 3, "vendedor": "Hernan"}, {"concesionario": "Autolux S.A.", "ultima_compra": "2026-03-26", "dias_sin_compra": 4, "vendedor": "Matias"}, {"concesionario": "Line-Up S.A.", "ultima_compra": "2026-03-25", "dias_sin_compra": 5, "vendedor": "Matias"}, {"concesionario": "Auto Prana S.A.", "ultima_compra": "2026-03-25", "dias_sin_compra": 5, "vendedor": "Matias"}, {"concesionario": "Autora S.A.", "ultima_compra": "2026-03-20", "dias_sin_compra": 10, "vendedor": "Hernan"}, {"concesionario": "Gonzalez Gonzalez S.A", "ultima_compra": "2026-03-19", "dias_sin_compra": 11, "vendedor": "Hernan"}, {"concesionario": "TTC - Auto Argentina S.A.", "ultima_compra": "2026-03-18", "dias_sin_compra": 12, "vendedor": "Hernan"}, {"concesionario": "Nippon Car S.R.L.", "ultima_compra": "2026-03-16", "dias_sin_compra": 14, "vendedor": "Matias"}, {"concesionario": "Sakura Motors S.A.", "ultima_compra": "2026-03-12", "dias_sin_compra": 18, "vendedor": "Hernan"}, {"concesionario": "Zento S.A.", "ultima_compra": "2026-03-11", "dias_sin_compra": 19, "vendedor": "Matias"}, {"concesionario": "Kansai S.A.", "ultima_compra": "2026-03-09", "dias_sin_compra": 21, "vendedor": "Matias"}, {"concesionario": "TOYOTA OLIVIERI", "ultima_compra": "2026-03-09", "dias_sin_compra": 21, "vendedor": "Hernan"}, {"concesionario": "Autos del Sur S.A.", "ultima_compra": "2026-03-06", "dias_sin_compra": 24, "vendedor": "Matias"}, {"concesionario": "Fecorp S.R.L.", "ultima_compra": "2026-03-05", "dias_sin_compra": 25, "vendedor": "Hernan"}, {"concesionario": "Mendez Kyoudai S.A.", "ultima_compra": "2026-03-05", "dias_sin_compra": 25, "vendedor": "Hernan"}, {"concesionario": "Audec S.A.", "ultima_compra": "2026-03-04", "dias_sin_compra": 26, "vendedor": "Hernan"}, {"concesionario": "Pichetti S.A.", "ultima_compra": "2026-03-02", "dias_sin_compra": 28, "vendedor": "Hernan"}], "velocity": [{"nombre": "ATURY11406", "total_units": 99, "months": 3, "avg_monthly": 33.0}, {"nombre": "ATURY09510", "total_units": 38, "months": 3, "avg_monthly": 12.7}, {"nombre": "ATURY12424", "total_units": 36, "months": 3, "avg_monthly": 12.0}, {"nombre": "ATURY09515", "total_units": 35, "months": 3, "avg_monthly": 11.7}, {"nombre": "ATURY04504", "total_units": 34, "months": 3, "avg_monthly": 11.3}, {"nombre": "ATURY11403", "total_units": 33, "months": 3, "avg_monthly": 11.0}, {"nombre": "ATURY11417", "total_units": 33, "months": 3, "avg_monthly": 11.0}, {"nombre": "ATURY11402", "total_units": 32, "months": 3, "avg_monthly": 10.7}, {"nombre": "ATURY12423", "total_units": 32, "months": 3, "avg_monthly": 10.7}, {"nombre": "ATURY04505", "total_units": 29, "months": 3, "avg_monthly": 9.7}, {"nombre": "ATURY12406", "total_units": 29, "months": 3, "avg_monthly": 9.7}, {"nombre": "ATURY12415", "total_units": 29, "months": 3, "avg_monthly": 9.7}, {"nombre": "ATURY12403", "total_units": 28, "months": 3, "avg_monthly": 9.3}, {"nombre": "ATURY11412", "total_units": 27, "months": 3, "avg_monthly": 9.0}, {"nombre": "ATURY11405", "total_units": 24, "months": 3, "avg_monthly": 8.0}], "vendedores": [{"vendedor": "Matias", "ventas": 72350000, "unidades": 290, "ordenes": 145, "concesionarios_activos": 9, "margen": 9100000}, {"vendedor": "Hernan", "ventas": 108693097, "unidades": 481, "ordenes": 175, "concesionarios_activos": 17, "margen": 13700000}], "mensual_por_vendedor": [{"mes": "2026-01", "vendedor": "Matias", "ventas": 5951670, "unidades": 17}, {"mes": "2026-01", "vendedor": "Hernan", "ventas": 8927505, "unidades": 27}, {"mes": "2026-02", "vendedor": "Matias", "ventas": 27028412, "unidades": 94}, {"mes": "2026-02", "vendedor": "Hernan", "ventas": 40542619, "unidades": 153}, {"mes": "2026-03", "vendedor": "Matias", "ventas": 22595256, "unidades": 107}, {"mes": "2026-03", "vendedor": "Hernan", "ventas": 33892885, "unidades": 174}, {"mes": "2026-04", "vendedor": "Matias", "ventas": 16841900, "unidades": 76}, {"mes": "2026-04", "vendedor": "Hernan", "ventas": 25262851, "unidades": 123}]};
 
 function renderAll(d){
   D=d;
@@ -637,7 +652,7 @@ function renderAll(d){
   $('pl').textContent=ms.length?ms[0]+' - '+ms[ms.length-1]:'—';
   const urg=(d.recency||[]).filter(r=>r.dias_sin_compra>25).length;
   $('alertBadge').textContent=urg>0?urg:'';
-  rKPIs(d);rCharts(d);rTables(d);rVend(d);
+  rKPIs(d);rCharts(d);rTables(d);rVend(d);initMesFilter(d);rInsights();
 }
 
 function rKPIs(d){
@@ -705,14 +720,24 @@ function rTables(d){
   $('tConc').innerHTML=ALL_CONCS.sort((a,b)=>b.total_ars-a.total_ars).map((c,i)=>{
   const st=!c.activo?'<span class="tag tag-b">Sin compras</span>':c.dias_sin_compra>30?'<span class="tag tag-r">Urgente</span>':c.dias_sin_compra>14?'<span class="tag tag-o">Llamar</span>':'<span class="tag tag-g">Activo</span>';
   const vc=c.vendedor==='Matias'?'var(--blue)':'var(--red)';
-  return '<tr><td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td><td class="nm">'+c.nombre+'</td><td style="color:'+vc+';font-size:11px">'+c.vendedor+'</td><td>'+(c.total_ars>0?fN(c.total_ars):'—')+'</td><td>'+(c.n_ordenes||'—')+'</td><td>'+(c.ultima||'—')+'</td><td>'+st+'</td></tr>';
+  return '<tr style="cursor:pointer" onclick="showConcEvo(\'' + c.nombre.replace(/\'/g, "\\'\'") + '\')" ><td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td><td class="nm">'+c.nombre+'</td><td style="color:'+vc+';font-size:11px">'+c.vendedor+'</td><td>'+(c.total_ars>0?fN(c.total_ars):'—')+'</td><td>'+(c.n_ordenes||'—')+'</td><td>'+(c.ultima||'—')+'</td><td>'+st+'</td></tr>';
 }).join('');
   $('alConc').innerHTML=(d.recency||[]).filter(r=>r.dias_sin_compra>=14).map(r=>{const cl=r.dias_sin_compra>30?'r':'o';return '<div class="ai '+cl+'"><div class="ad '+cl+'"></div><div class="at"><strong>'+r.concesionario+'</strong>Ultima compra hace '+r.dias_sin_compra+' dias</div><div style="font-size:11px;color:var(--text-3);font-weight:600">'+r.dias_sin_compra+'d</div></div>';}).join('');
   $('tVend').innerHTML=(d.recency||[]).map((r,i)=>{const d2=r.dias_sin_compra;const st=d2>30?'<span class="tag tag-r">Sin contacto</span>':d2>14?'<span class="tag tag-o">Seguimiento</span>':'<span class="tag tag-g">Activo</span>';const col=d2>30?'var(--red)':d2>14?'var(--orange)':'var(--green)';const vc=r.vendedor==='Matias'?'var(--blue)':'var(--red)';return '<tr><td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td><td class="nm">'+r.concesionario+'</td><td style="color:'+vc+';font-weight:600">'+(r.vendedor||'—')+'</td><td>'+(r.ultima_compra||'—')+'</td><td style="font-weight:700;color:'+col+'">'+d2+' dias</td><td>'+st+'</td></tr>';}).join('');
-  $('tProd').innerHTML=(d.topProd||[]).map((p,i)=>{const vel=(d.velocity||[]).find(v=>v.nombre===p.nombre);const va=vel?vel.avg_monthly:'—';const vc=vel?(vel.avg_monthly>=15?'var(--red)':vel.avg_monthly>=8?'var(--gold-light)':'var(--text-2)'):'var(--text-3)';return '<tr><td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td><td class="nm">'+p.nombre+'</td><td>'+fN(p.importe)+'</td><td>'+p.unidades+'</td><td>'+(p.ultima||'—')+'</td><td style="font-weight:700;color:'+vc+'">'+va+' u/mes</td></tr>';}).join('');
+  $('tProd').innerHTML=(d.topProd||[]).map((p,i)=>{const vel=(d.velocity||[]).find(v=>v.nombre===p.nombre);const va=vel?vel.avg_monthly:'—';const vc=vel?(vel.avg_monthly>=15?'var(--red)':vel.avg_monthly>=8?'var(--gold-light)':'var(--text-2)'):'var(--text-3)';return '<tr style="cursor:pointer" onclick="showProdEvo(\'' + p.nombre.replace(/\'/g, "\\'\'") + '\')" ><td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td><td class="nm">'+p.nombre+'</td><td>'+fN(p.importe)+'</td><td>'+p.unidades+'</td><td>'+(p.ultima||'—')+'</td><td style="font-weight:700;color:'+vc+'">'+va+' u/mes</td></tr>';}).join('');
   $('alProd').innerHTML=(d.sinMovimiento||[]).filter(s=>s.dias>15).map(s=>{const cl=s.dias>35?'r':'o';const nm=s.nombre||s.Producto||'—';const ul=s.ultima||'—';const di=s.dias||0;return '<div class="ai '+cl+'"><div class="ad '+cl+'"></div><div class="at"><strong>'+nm+'</strong>Sin ventas desde '+ul+'</div><div style="font-size:11px;color:var(--text-3);font-weight:600">'+di+'d</div></div>';}).join('');
   $('stDiv').innerHTML=(d.velocity||[]).slice(0,12).map(v=>{const sg=Math.ceil(v.avg_monthly*1.3);const col=v.avg_monthly>=15?'var(--red)':v.avg_monthly>=8?'var(--gold-light)':'var(--blue)';return '<div class="sr"><div><div class="sp2">'+v.nombre+'</div><div style="font-size:10px;color:var(--text-3)">'+v.months+' mes(es)</div></div><div style="text-align:center"><div style="font-size:12px;font-weight:700;color:'+col+'">'+v.avg_monthly+'</div><div style="font-size:10px;color:var(--text-3)">uds/mes</div></div><div style="font-size:12px;color:var(--green);min-width:80px;text-align:right;font-weight:600">Pedir '+sg+'</div></div>';}).join('');
-  $('tSt').innerHTML=(d.velocity||[]).map((v,i)=>{const sg=Math.ceil(v.avg_monthly*1.3);const pr=v.avg_monthly>=15?'<span class="tag tag-r">Alta</span>':v.avg_monthly>=8?'<span class="tag tag-o">Media</span>':'<span class="tag tag-b">Normal</span>';return '<tr><td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td><td class="nm">'+v.nombre+'</td><td>'+v.total_units+'</td><td>'+v.months+'</td><td style="font-weight:700;color:var(--gold-light)">'+v.avg_monthly+'</td><td style="font-weight:700;color:var(--green)">'+sg+'</td><td>'+pr+'</td></tr>';}).join('');
+  $('tSt').innerHTML=(STOCK_DATA||[]).map((s,i)=>{
+  const erp=s.erp!==null?s.erp:'—';
+  const teorico=s.teorico;
+  const diff=s.diff;
+  const vel=s.vel_mes;
+  const sg=Math.ceil(vel*3);
+  const erpColor=diff!==null?(Math.abs(diff)>2?'var(--orange)':'var(--green)'):'var(--text-3)';
+  const pr=vel>=15?'<span class="tag tag-r">Alta</span>':vel>=8?'<span class="tag tag-o">Media</span>':vel>0?'<span class="tag tag-b">Normal</span>':'<span class="tag" style="background:rgba(255,255,255,0.05);color:var(--text-3)">Sin demanda</span>';
+  const diffStr=diff!==null?(diff>=0?'+'+diff:diff):'—';
+  return '<tr style="cursor:pointer" onclick="showStockDetail(''+s.codigo+'')"><td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td><td class="nm">'+s.codigo+'</td><td>'+s.importado+'</td><td>'+s.facturado+'</td><td>'+s.pendiente+'</td><td style="font-weight:700;color:'+(teorico<0?'var(--red)':'var(--text)')+'">'+teorico+'</td><td style="font-weight:700;color:'+erpColor+'">'+erp+'</td><td style="font-weight:700;color:'+(diff!==null&&Math.abs(diff)>2?'var(--orange)':'var(--text-3)')+'">'+diffStr+'</td><td style="color:var(--gold-light)">'+vel+'</td><td>'+pr+'</td></tr>';
+}).join('');
 }
 
 function rVend(d){
@@ -967,6 +992,487 @@ function simC(){
   const fd=d=>d.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
   $('cronDiv').innerHTML='<div style="display:flex;flex-direction:column;gap:10px"><div class="ai r"><div class="ad r"></div><div class="at"><strong>HOY - Al nacionalizar</strong>'+fN(tN)+'</div></div><div class="ai g"><div class="ad g"></div><div class="at"><strong>'+fd(cb)+' - Cobro venta</strong>+ '+fN(ve)+'</div></div><div class="ai o"><div class="ad o"></div><div class="at"><strong>'+fd(m1)+' - Cuota 30 dias</strong>- '+fN(c3)+'</div></div><div class="ai o"><div class="ad o"></div><div class="at"><strong>'+fd(m2)+' - Cuota 60 dias</strong>- '+fN(c6)+'</div></div><div style="background:var(--bg4);border-radius:8px;padding:12px;font-size:12px;color:var(--text-2)">Balance: Cobros: '+fN(ve)+' Egresos: '+fN(tN+c3+c6+ft+cm)+'<br><strong style="color:'+(util>=0?'var(--green)':'var(--red)')+'">Resultado neto: '+fN(util)+'</strong></div></div>';
 }
+
+
+
+// ============================================================
+// FILTRO MES GLOBAL
+// ============================================================
+let MES_FILTRO = '';
+
+function initMesFilter(data) {
+  const sel = document.getElementById('filtroMes');
+  if (!sel || !data) return;
+  const meses = (data.evolucion || []).map(e => e.mes).sort();
+  sel.innerHTML = '<option value="">Todos los meses</option>';
+  meses.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    sel.appendChild(opt);
+  });
+}
+
+function applyMesFilter() {
+  MES_FILTRO = document.getElementById('filtroMes').value;
+  if (!D) return;
+  // Filtrar data por mes y re-renderizar sección activa
+  const secActiva = document.querySelector('.sec.active');
+  if (!secActiva) return;
+  const id = secActiva.id.replace('sec-', '');
+  // Re-renderizar con datos filtrados
+  const dFilt = filterDataByMes(D, MES_FILTRO);
+  if (id === 'resumen') { rKPIs(dFilt); Object.keys(CH).forEach(dc); rCharts(dFilt); rTables(dFilt); }
+  if (id === 'vendedores') { rVend(dFilt); }
+  if (id === 'concesionarios') { rTables(dFilt); }
+  if (id === 'productos') { rTables(dFilt); }
+  if (id === 'compras') { rTables(dFilt); }
+}
+
+function filterDataByMes(data, mes) {
+  if (!mes) return data;
+  const filtered = JSON.parse(JSON.stringify(data));
+  // Filtrar evolución
+  filtered.evolucion = (data.evolucion || []).filter(e => e.mes === mes);
+  // Ajustar KPIs al mes
+  const ev = filtered.evolucion[0];
+  if (ev) {
+    filtered.kpis = {...data.kpis,
+      total_ventas: ev.ventas,
+      total_unidades: ev.unidades,
+      mes_actual_ventas: ev.ventas,
+      mes_actual_unidades: ev.unidades,
+      mes_actual_label: ev.mes
+    };
+  }
+  return filtered;
+}
+
+// ============================================================
+// EVOLUCIÓN INDIVIDUAL — CONCESIONARIO
+// ============================================================
+function showConcEvo(nombre) {
+  if (!D) return;
+  const conc = ALL_CONCS.find(c => c.nombre === nombre);
+  if (!conc) return;
+
+  const panel = document.getElementById('evoPanel');
+  document.getElementById('evoPanelTitle').textContent = nombre;
+  document.getElementById('evoPanelSub').textContent = `${conc.vendedor} · ${conc.provincia}`;
+  document.getElementById('evoPanelChartLabel').textContent = 'Evolución de compras mensual';
+  document.getElementById('evoPanelTableLabel').textContent = 'Resumen';
+
+  // KPIs
+  const dias = conc.dias_sin_compra;
+  const stColor = dias < 14 ? 'var(--green)' : dias < 30 ? 'var(--orange)' : 'var(--red)';
+  document.getElementById('evoPanelKPIs').innerHTML = `
+    <div class="kc"><div class="kl">Ventas totales</div><div class="kv" style="font-size:24px">${fmt(conc.total_ars)}</div></div>
+    <div class="kc"><div class="kl">Órdenes</div><div class="kv" style="font-size:24px">${conc.n_ordenes}</div></div>
+    <div class="kc"><div class="kl">Días sin compra</div><div class="kv" style="font-size:24px;color:${stColor}">${dias < 999 ? dias + 'd' : 'Nunca'}</div></div>
+  `;
+
+  // Gráfico mensual desde SD.concs o DEMO
+  // Datos reales de facturación por cliente
+  const evCliente = EVOL_CLIENTE[nombre] || {};
+  const meses = Object.keys(evCliente).sort();
+  const allMeses = (D.evolucion||[]).map(e=>e.mes);
+  const labels = allMeses;
+  const vals = allMeses.map(m => evCliente[m] ? evCliente[m].importe : 0);
+  const udsVals = allMeses.map(m => evCliente[m] ? evCliente[m].uds : 0);
+
+  dc('cEvoPanel');
+  CH.cEvoPanel = new Chart(document.getElementById('cEvoPanel'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+      { data: vals, backgroundColor: 'rgba(232,0,29,0.7)', borderColor: '#E8001D', borderWidth: 2, borderRadius: 6, label: 'ARS' },
+      { data: udsVals, type: 'line', borderColor: '#C9A227', backgroundColor: 'transparent', tension: 0.4, pointRadius: 4, pointBackgroundColor: '#C9A227', label: 'Uds', yAxisID: 'y1' }
+    ]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,.04)' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Tabla productos
+  const mxData = MATRIX_DATA.find(c => c.nombre === nombre);
+  const prods = mxData ? mxData.products : [];
+  document.getElementById('evoPanelTable').innerHTML = prods.length
+    ? prods.map(p => `<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2)">${p}</div>`).join('')
+    : '<div style="font-size:13px;color:var(--text-3);padding:20px 0;text-align:center">Sin productos registrados</div>';
+
+  panel.style.display = 'flex';
+}
+
+// ============================================================
+// EVOLUCIÓN INDIVIDUAL — PRODUCTO
+// ============================================================
+function showProdEvo(nombre) {
+  if (!D) return;
+  const prod = (D.topProd || []).find(p => p.nombre === nombre) || {nombre, importe:0, unidades:0};
+  const vel = (D.velocity || []).find(v => v.nombre === nombre);
+
+  const panel = document.getElementById('evoPanel');
+  document.getElementById('evoPanelTitle').textContent = nombre.length > 45 ? nombre.substring(0,45)+'...' : nombre;
+  document.getElementById('evoPanelSub').textContent = `Producto · ${vel ? vel.avg_monthly + ' uds/mes' : 'velocidad desconocida'}`;
+  document.getElementById('evoPanelChartLabel').textContent = 'Evolución de ventas mensual (estimado)';
+  document.getElementById('evoPanelTableLabel').textContent = 'Concesionarios que compraron este producto';
+
+  // KPIs
+  document.getElementById('evoPanelKPIs').innerHTML = `
+    <div class="kc"><div class="kl">Importe total</div><div class="kv" style="font-size:24px">${fmt(prod.importe||0)}</div></div>
+    <div class="kc"><div class="kl">Unidades</div><div class="kv" style="font-size:24px">${prod.unidades||0}</div></div>
+    <div class="kc"><div class="kl">Vel. demanda</div><div class="kv" style="font-size:24px;color:var(--gold-light)">${vel ? vel.avg_monthly : '—'} u/mes</div></div>
+  `;
+
+  // Gráfico
+  // Datos reales de facturación por producto
+  const evProd = EVOL_PROD[nombre] || {};
+  const allMesesP = (D.evolucion||[]).map(e=>e.mes);
+  const labels = allMesesP;
+  const vals = allMesesP.map(m => evProd[m] ? evProd[m].importe : 0);
+  const udsValsP = allMesesP.map(m => evProd[m] ? evProd[m].uds : 0);
+
+  dc('cEvoPanel');
+  CH.cEvoPanel = new Chart(document.getElementById('cEvoPanel'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+      { data: vals, borderColor: '#C9A227', backgroundColor: 'rgba(201,162,39,0.1)', tension: 0.4, fill: true, pointBackgroundColor: '#C9A227', pointRadius: 5, label: 'ARS' },
+      { data: udsValsP, type: 'bar', backgroundColor: 'rgba(59,130,246,0.4)', label: 'Uds', yAxisID: 'y1' }
+    ]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,.04)' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Quiénes compraron
+  const compradores = MATRIX_DATA.filter(c => c.products && c.products.some(p => p.includes(nombre.substring(0,15))));
+  document.getElementById('evoPanelTable').innerHTML = compradores.length
+    ? compradores.map(c => {
+        const vc = c.vendedor === 'Matias' ? 'var(--blue)' : 'var(--red)';
+        return `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:12px;color:var(--text)">${c.nombre}</div>
+          <div style="font-size:11px;color:${vc};font-weight:600">${c.vendedor}</div>
+          <div style="font-size:11px;color:var(--text-3)">${c.provincia}</div>
+        </div>`;
+      }).join('')
+    : '<div style="font-size:13px;color:var(--text-3);padding:20px 0;text-align:center">Sin datos de compradores</div>';
+
+  panel.style.display = 'flex';
+}
+
+// ============================================================
+// INSIGHTS AUTOMÁTICOS
+// ============================================================
+
+function showStockDetail(codigo) {
+  const s = (STOCK_DATA||[]).find(x => x.codigo === codigo);
+  if (!s) return;
+  const erp = s.erp !== null ? s.erp : '—';
+  const diff = s.diff !== null ? s.diff : null;
+  const diffColor = diff === null ? 'var(--text-3)' : Math.abs(diff) > 2 ? 'var(--orange)' : 'var(--green)';
+  const diffStr = diff !== null ? (diff >= 0 ? '+' + diff : diff) : '—';
+  const meses = s.meses_cobertura < 99 ? s.meses_cobertura + ' meses' : 'Sin demanda';
+  const mesColor = s.meses_cobertura < 1.5 ? 'var(--red)' : s.meses_cobertura < 3 ? 'var(--orange)' : 'var(--green)';
+
+  document.getElementById('evoPanelTitle').textContent = codigo;
+  document.getElementById('evoPanelSub').textContent = 'Stock y trazabilidad del producto';
+  document.getElementById('evoPanelChartLabel').textContent = 'Evolución de ventas mensual';
+  document.getElementById('evoPanelTableLabel').textContent = 'Trazabilidad de stock';
+
+  document.getElementById('evoPanelKPIs').innerHTML = `
+    <div class="kc"><div class="kl">Stock ERP (real)</div><div class="kv" style="font-size:26px;color:var(--gold-light)">${erp}</div></div>
+    <div class="kc"><div class="kl">Stock teórico</div><div class="kv" style="font-size:26px;color:${s.teorico<0?'var(--red)':'var(--text)'}">${s.teorico}</div></div>
+    <div class="kc"><div class="kl">Cobertura</div><div class="kv" style="font-size:22px;color:${mesColor}">${meses}</div></div>
+  `;
+
+  // Gráfico evolución mensual del producto
+  const evP = EVOL_PROD[codigo] || {};
+  const allM = (D.evolucion||[]).map(e=>e.mes);
+  const valsP = allM.map(m => evP[m] ? evP[m].uds : 0);
+
+  dc('cEvoPanel');
+  CH.cEvoPanel = new Chart(document.getElementById('cEvoPanel'), {
+    type: 'bar',
+    data: {
+      labels: allM,
+      datasets: [{ data: valsP, backgroundColor: 'rgba(201,162,39,0.7)', borderRadius: 6, label: 'Uds facturadas' }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { grid: { color: 'rgba(255,255,255,.04)' } }, x: { grid: { display: false } } }
+    }
+  });
+
+  document.getElementById('evoPanelTable').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0">
+      <div style="background:var(--bg4);border-radius:8px;padding:14px">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:10px">📦 Trazabilidad</div>
+        <div style="font-size:13px;color:var(--text-2);line-height:2">
+          Importado: <strong style="color:var(--text)">${s.importado} uds</strong><br>
+          Facturado: <strong style="color:var(--red)">${s.facturado} uds</strong><br>
+          Pendiente entrega: <strong style="color:var(--orange)">${s.pendiente} uds</strong><br>
+          <div style="border-top:1px solid var(--border);margin:6px 0;padding-top:6px">
+          Stock teórico: <strong style="color:${s.teorico<0?'var(--red)':'var(--text)'}">${s.teorico} uds</strong><br>
+          Stock ERP real: <strong style="color:var(--gold-light)">${erp} uds</strong><br>
+          Diferencia: <strong style="color:${diffColor}">${diffStr} uds</strong>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--bg4);border-radius:8px;padding:14px">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:10px">📈 Demanda</div>
+        <div style="font-size:13px;color:var(--text-2);line-height:2">
+          Velocidad: <strong style="color:var(--gold-light)">${s.vel_mes} uds/mes</strong><br>
+          Cobertura actual: <strong style="color:${mesColor}">${meses}</strong><br>
+          Stock sugerido (3m): <strong style="color:var(--green)">${Math.ceil(s.vel_mes * 3)} uds</strong>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('evoPanel').style.display = 'flex';
+}
+
+function itab(id, btn) {
+  ['riesgo','skus','oport','tend'].forEach(t => {
+    document.getElementById('it-'+t).style.display = t===id ? 'block' : 'none';
+  });
+  document.querySelectorAll('#sec-insights .tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (id==='riesgo') rInsRiesgo();
+  if (id==='skus') rInsSkus();
+  if (id==='oport') rInsOport();
+  if (id==='tend') rInsTend();
+}
+
+function rInsights() {
+  if (!D) return;
+  rInsRiesgo();
+  // Badge con total de alertas críticas
+  const criticos = ALL_CONCS.filter(c => c.activo && c.dias_sin_compra > 30).length;
+  const sinMov = (D.sinMovimiento||[]).filter(s=>s.dias>30).length;
+  const badge = document.getElementById('insightsBadge');
+  if (badge) badge.textContent = (criticos + sinMov) || '';
+}
+
+function rInsRiesgo() {
+  if (!D) return;
+  const r30 = ALL_CONCS.filter(c => c.activo && c.dias_sin_compra > 30);
+  const r60 = ALL_CONCS.filter(c => c.activo && c.dias_sin_compra > 60);
+  const r0  = ALL_CONCS.filter(c => !c.activo);
+
+  document.getElementById('ins-r30').textContent = r30.length;
+  document.getElementById('ins-r60').textContent = r60.length;
+  document.getElementById('ins-r0').textContent = r0.length;
+
+  const sorted = [...ALL_CONCS].filter(c=>c.activo).sort((a,b) => b.dias_sin_compra - a.dias_sin_compra);
+  document.getElementById('ins-riesgo-list').innerHTML = sorted.map(c => {
+    const dias = c.dias_sin_compra;
+    if (dias > 999) return '';
+    const cl = dias > 60 ? 'r' : dias > 30 ? 'o' : dias > 14 ? '' : 'g';
+    const vc = c.vendedor === 'Matias' ? 'var(--blue)' : 'var(--red)';
+    const urgencia = dias > 60 ? '🔴 Crítico' : dias > 30 ? '🟠 Urgente' : dias > 14 ? '🟡 Seguimiento' : '🟢 Activo';
+    return `<div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer" onclick="showConcEvo('${c.nombre.replace(/'/g,"\\'")}')">
+      <div style="flex:1">
+        <div style="font-size:13px;color:var(--text);font-weight:500">${c.nombre}</div>
+        <div style="font-size:11px;color:${vc};margin-top:2px">${c.vendedor} · ${c.provincia}</div>
+      </div>
+      <div style="text-align:center;min-width:60px">
+        <div style="font-size:18px;font-weight:700;color:${dias>30?'var(--red)':dias>14?'var(--orange)':'var(--green)'}">${dias}d</div>
+        <div style="font-size:10px;color:var(--text-3)">sin comprar</div>
+      </div>
+      <div style="font-size:11px;font-weight:600">${urgencia}</div>
+      <div style="text-align:right;min-width:80px">
+        <div style="font-size:12px;color:var(--text-2)">${fmt(c.total_ars)}</div>
+        <div style="font-size:10px;color:var(--text-3)">acumulado</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function rInsSkus() {
+  if (!D) return;
+  const vel = D.velocity || [];
+  const sin = D.sinMovimiento || [];
+
+  const sinMov = sin.filter(s => s.dias > 30);
+  const alta = vel.filter(v => v.avg_monthly >= 10);
+
+  // Adopción: cuántos concs compran cada producto
+  const adopcion = {};
+  MATRIX_DATA.forEach(c => {
+    if (!c.activo) return;
+    (c.products||[]).forEach(p => {
+      const k = p.substring(0,20);
+      adopcion[k] = (adopcion[k]||0) + 1;
+    });
+  });
+
+  document.getElementById('ins-s30').textContent = sinMov.length;
+  const s1 = Object.entries(adopcion).filter(([,v]) => v === 1);
+  document.getElementById('ins-s1').textContent = s1.length;
+  document.getElementById('ins-salt').textContent = alta.length;
+
+  // SKUs malos
+  document.getElementById('ins-skus-bad').innerHTML = sinMov.map(s => {
+    const adop = Object.entries(adopcion).find(([k]) => s.nombre && s.nombre.includes(k.substring(0,10)));
+    return `<div style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer" onclick="showProdEvo('${(s.nombre||'').replace(/'/g,"\\'")}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:12px;color:var(--text);font-weight:500">${s.nombre||'—'}</div>
+        <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(232,0,29,0.15);color:var(--red);font-weight:700">${s.dias}d sin venta</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:3px">Última venta: ${s.ultima||'—'} · ${adop ? adop[1]+' conc.' : '1 conc.'}</div>
+    </div>`;
+  }).join('') || '<div style="padding:20px;text-align:center;color:var(--green)">✓ Sin SKUs problemáticos</div>';
+
+  // SKUs buenos
+  document.getElementById('ins-skus-good').innerHTML = [...vel].sort((a,b)=>b.avg_monthly-a.avg_monthly).slice(0,10).map(v => {
+    const adK = Object.entries(adopcion).find(([k]) => v.nombre && v.nombre.includes(k.substring(0,10)));
+    const adCount = adK ? adK[1] : '—';
+    const color = v.avg_monthly >= 15 ? 'var(--red)' : v.avg_monthly >= 10 ? 'var(--orange)' : 'var(--gold-light)';
+    return `<div style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer" onclick="showProdEvo('${v.nombre.replace(/'/g,"\\'")}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:12px;color:var(--text);font-weight:500">${v.nombre.substring(0,45)}</div>
+        <span style="font-size:11px;font-weight:700;color:${color}">${v.avg_monthly} u/mes</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:3px">${adCount} concesionarios · ${v.total_units} uds totales</div>
+    </div>`;
+  }).join('');
+}
+
+function rInsOport() {
+  if (!D) return;
+  const opps = SD.opps || [];
+  const mat = (o, vend) => opps.filter(op => op.v === vend).slice(0,8).map(op => `
+    <div style="padding:9px 14px;border-bottom:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--text);font-weight:500">${op.c}</div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:2px">Ofrecer: <span style="color:var(--gold-light)">${op.p.substring(0,40)}</span></div>
+      <div style="font-size:10px;color:var(--text-3)">Adoptado por ${op.cc}/26 concs</div>
+    </div>`).join('');
+
+  document.getElementById('ins-opp-m').innerHTML = mat(opps,'Matias') || '<div style="color:var(--text-3);font-size:13px;padding:12px">Sin oportunidades detectadas</div>';
+  document.getElementById('ins-opp-h').innerHTML = mat(opps,'Hernan') || '<div style="color:var(--text-3);font-size:13px;padding:12px">Sin oportunidades detectadas</div>';
+
+  // Cobertura baja
+  const baja = MATRIX_DATA.filter(c => {
+    if (!c.activo) return false;
+    const covered = Object.values(c.groups).filter(v => v !== 'none').length;
+    return covered / GROUP_NAMES.length < 0.3;
+  });
+  document.getElementById('ins-opp-cob').innerHTML = baja.length
+    ? baja.map(c => {
+        const covered = Object.values(c.groups).filter(v=>v!=='none').length;
+        const pct = Math.round(covered/GROUP_NAMES.length*100);
+        const vc = c.vendedor==='Matias'?'var(--blue)':'var(--red)';
+        return `<div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer" onclick="showConcEvo('${c.nombre.replace(/'/g,"\\'")}')">
+          <div style="flex:1"><div style="font-size:13px;color:var(--text)">${c.nombre}</div><div style="font-size:11px;color:${vc}">${c.vendedor} · ${c.provincia}</div></div>
+          <div style="font-size:18px;font-weight:700;color:var(--orange)">${pct}%</div>
+          <div style="font-size:11px;color:var(--text-3)">${covered}/${GROUP_NAMES.length} categorías</div>
+        </div>`;
+      }).join('')
+    : '<div style="padding:20px;text-align:center;color:var(--green)">✓ Todos con buena cobertura</div>';
+}
+
+function rInsTend() {
+  if (!D) return;
+  const ev = D.evolucion || [];
+  const labels = ev.map(e => e.mes);
+
+  dc('cInsTend');
+  CH.cInsTend = new Chart(document.getElementById('cInsTend'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Ventas', data: ev.map(e=>e.ventas), borderColor:'#E8001D', backgroundColor:'rgba(232,0,29,0.1)', tension:0.4, fill:true, pointRadius:5 },
+        { label: 'Unidades', data: ev.map(e=>e.unidades*1000), borderColor:'#C9A227', backgroundColor:'transparent', tension:0.4, yAxisID:'y1', pointRadius:5 }
+      ]
+    },
+    options: {
+      plugins:{ legend:{ position:'top' } },
+      scales:{
+        y:{ ticks:{callback:v=>fmt(v)}, grid:{color:'rgba(255,255,255,.04)'} },
+        y1:{ position:'right', ticks:{callback:v=>Math.round(v/1000)+' uds'}, grid:{display:false} },
+        x:{ grid:{display:false} }
+      }
+    }
+  });
+
+  // Categorías — distribución aproximada
+  const cats = GROUP_NAMES;
+  const catData = cats.map((g,i) => {
+    const count = MATRIX_DATA.reduce((s,c) => s + (c.groups[g]&&c.groups[g]!=='none'?1:0), 0);
+    return count;
+  });
+  const catColors = Object.values(GROUP_COLORS);
+
+  dc('cInsCat');
+  CH.cInsCat = new Chart(document.getElementById('cInsCat'), {
+    type: 'bar',
+    data: {
+      labels: cats.map(g => g.split(' ')[0]),
+      datasets: [{ data: catData, backgroundColor: catColors, borderRadius: 6 }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { grid:{color:'rgba(255,255,255,.04)'}, ticks:{stepSize:1} },
+        x: { grid:{display:false} }
+      }
+    }
+  });
+
+  // Resumen ejecutivo
+  const totalV = ev.reduce((s,e)=>s+e.ventas,0);
+  const totalU = ev.reduce((s,e)=>s+e.unidades,0);
+  const lastMes = ev[ev.length-1];
+  const prevMes = ev[ev.length-2];
+  const trend = lastMes && prevMes ? ((lastMes.ventas-prevMes.ventas)/prevMes.ventas*100).toFixed(1) : 0;
+  const trendStr = trend >= 0 ? `<span style="color:var(--green)">▲ ${trend}%</span>` : `<span style="color:var(--red)">▼ ${Math.abs(trend)}%</span>`;
+  const topConc = (D.topConc||[])[0];
+  const topProd = (D.topProd||[])[0];
+  const urgentes = ALL_CONCS.filter(c=>c.activo&&c.dias_sin_compra>30).length;
+
+  document.getElementById('ins-resumen').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="background:var(--bg4);border-radius:8px;padding:16px">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:8px">📊 Performance general</div>
+        Ventas acumuladas: <strong style="color:var(--text)">${fmt(totalV)}</strong> en ${ev.length} meses<br>
+        Total unidades: <strong style="color:var(--text)">${totalU}</strong><br>
+        Último mes vs anterior: ${trendStr}<br>
+        Concesionarios activos: <strong style="color:var(--green)">${ALL_CONCS.filter(c=>c.activo).length}</strong> de ${ALL_CONCS.length}
+      </div>
+      <div style="background:var(--bg4);border-radius:8px;padding:16px">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:8px">⚠️ Alertas</div>
+        Concesionarios sin comprar +30d: <strong style="color:var(--red)">${urgentes}</strong><br>
+        SKUs sin movimiento +30d: <strong style="color:var(--orange)">${(D.sinMovimiento||[]).filter(s=>s.dias>30).length}</strong><br>
+        Oportunidades sin activar: <strong style="color:var(--gold-light)">${(SD.opps||[]).length}</strong>
+      </div>
+      <div style="background:var(--bg4);border-radius:8px;padding:16px">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:8px">🏆 Líderes</div>
+        Top concesionario: <strong style="color:var(--text)">${topConc?topConc.nombre.split(' ')[0]:'—'}</strong> (${topConc?fmt(topConc.importe):'—'})<br>
+        Top producto: <strong style="color:var(--text)">${topProd?topProd.nombre.substring(0,30):'—'}</strong>
+      </div>
+      <div style="background:var(--bg4);border-radius:8px;padding:16px">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:8px">💡 Recomendaciones</div>
+        ${urgentes > 0 ? `• Contactar ${urgentes} concs sin comprar en +30 días<br>` : '• Red activa en buen estado<br>'}
+        ${(D.sinMovimiento||[]).filter(s=>s.dias>30).length > 0 ? `• Revisar ${(D.sinMovimiento||[]).filter(s=>s.dias>30).length} SKUs sin movimiento<br>` : ''}
+        • Activar oportunidades de cross-sell detectadas
+      </div>
+    </div>
+  `;
+}
+
 
 window.addEventListener('load',()=>{
   localStorage.setItem(URL_KEY,HURL);
