@@ -1550,7 +1550,16 @@ function parseCSVText(text) {
 
 function parseNumAR(v) {
   if (!v) return 0;
-  return parseFloat(v.toString().replace(/\./g,'').replace(',','.')) || 0;
+  const s = v.toString().trim();
+  // Formato argentino: 1.234,56 → quitar puntos de miles, reemplazar coma decimal
+  // Pero si no tiene coma, el punto puede ser decimal (ej: "1.0")
+  if (s.includes(',')) {
+    // Formato AR: puntos son miles, coma es decimal
+    return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
+  } else {
+    // Sin coma: el punto es decimal directo (ej: "1.0", "348691.94")
+    return parseFloat(s) || 0;
+  }
 }
 
 function loadStockCSV(input) {
