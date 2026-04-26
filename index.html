@@ -569,8 +569,14 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
         </div>
       </div>
       <div class="card" style="margin-bottom:16px">
-        <div class="ct">📊 Ventas: Pedidos Sheet vs Facturación ERP por mes</div>
-        <canvas id="cERPComp" height="140"></canvas>
+        <div class="ct">📊 Facturación Sheet (pedidos) vs Facturación ERP (real) — por mes</div>
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:12px">
+          <span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px"><span style="width:12px;height:12px;border-radius:2px;background:rgba(59,130,246,0.7);display:inline-block"></span>Pedidos Sheet — lo que pidieron</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px"><span style="width:12px;height:12px;border-radius:2px;background:rgba(0,200,122,0.7);display:inline-block"></span>Facturación ERP — lo que salió</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:2px;background:#E8001D;display:inline-block"></span>Diferencia (brecha)</span>
+        </div>
+        <canvas id="cERPComp" height="160"></canvas>
+        <div id="erpCompResumen" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px"></div>
       </div>
     </div>
     <div class="g3">
@@ -763,7 +769,13 @@ function rKPIs(d){
   const csp=cambio!==null?'<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 8px;border-radius:20px;margin-top:8px;color:'+(parseFloat(cambio)>=0?'var(--green)':'var(--red)')+';background:'+(parseFloat(cambio)>=0?'rgba(0,200,122,0.1)':'rgba(232,0,29,0.1)')+'>"+'+(parseFloat(cambio)>=0?'&#9650;':'&#9660;')+' '+Math.abs(cambio)+'% vs mes anterior</span>':'';
   $('mesComp').innerHTML='<div style="margin-bottom:14px"><div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Mes actual ('+k.mes_actual_label+')</div><div style="font-family:Bebas Neue,sans-serif;font-size:28px">'+fmt(k.mes_actual_ventas)+'</div><div style="font-size:12px;color:var(--text-3)">'+k.mes_actual_unidades+' unidades</div>'+csp+'</div><div><div style="font-size:12px;color:var(--text-3);margin-bottom:4px">Mes anterior</div><div style="font-family:Bebas Neue,sans-serif;font-size:28px">'+fmt(k.mes_anterior_ventas)+'</div><div style="font-size:12px;color:var(--text-3)">'+k.mes_anterior_unidades+' unidades</div></div>';
   const sel=$('mesR');
-  if(sel){sel.innerHTML=(d.evolucion||[]).map(e=>'<option value="'+e.ventas+'">'+e.mes+' ('+fmt(e.ventas)+')</option>').join('');sel.innerHTML+='<option value="'+k.total_ventas+'">Total acumulado ('+fmt(k.total_ventas)+')</option>';}
+  if(sel){
+    sel.innerHTML=(d.evolucion||[]).map(e=>{
+      const costoLabel = e.costo_landed_ars ? ' | Costo: '+fmt(e.costo_landed_ars) : '';
+      return '<option value="'+e.ventas+'" data-costo="'+(e.costo_landed_ars||0)+'" data-flete="'+(e.flete_cargo||0)+'">'+e.mes+' ('+fmt(e.ventas)+costoLabel+')</option>';
+    }).join('');
+    sel.innerHTML+='<option value="'+k.total_ventas+'" data-costo="'+(k.costo_estimado_total||0)+'" data-flete="'+(k.flete_a_cargo_total||0)+'">Total acumulado ('+fmt(k.total_ventas)+')</option>';
+  }
   const ft=Math.round(k.total_ventas*FEE),cm=Math.round(k.total_ventas*COM);
   const mg=Math.round(k.total_ventas-(k.costo_estimado_total||0)-ft-cm-(k.flete_a_cargo_total||0));
   if($('nKV')){$('nKV').textContent=fmt(k.total_ventas);$('nKT').textContent=fmt(ft);$('nKC').textContent=fmt(cm);$('nKM').textContent=fmt(mg);$('nKM').style.color=mg>=0?'var(--green)':'var(--red)';}
@@ -1052,8 +1064,14 @@ function mkWF(lbl,val,tot){
     '<div style="font-size:12px;font-weight:'+(tot?700:400)+';color:'+col+';min-width:100px;text-align:right">'+fN(val)+'</div></div>';
 }
 function calcR(){
-  const ing=parseFloat($('mesR').value)||0,co=parseFloat($('cOp').value)||0,cr=parseFloat($('cRR').value)||0,cf=parseFloat($('cFi').value)||0,cx=parseFloat($('cOt').value)||0;
-  const cp=D?.kpis?.costo_estimado_total||0,fl=D?.kpis?.flete_a_cargo_total||0;
+  const mesVal = $('mesR').value;
+  // Buscar el mes seleccionado en evolucion para obtener costo real
+  const selMes = $('mesR');
+  const selectedOpt = selMes ? selMes.options[selMes.selectedIndex] : null;
+  const ing = parseFloat(mesVal)||0;
+  const co=parseFloat($('cOp').value)||0,cr=parseFloat($('cRR').value)||0,cf=parseFloat($('cFi').value)||0,cx=parseFloat($('cOt').value)||0;
+  const cp = selectedOpt && selectedOpt.dataset.costo ? parseInt(selectedOpt.dataset.costo) : Math.round(ing*0.35);
+  const fl = selectedOpt && selectedOpt.dataset.flete ? parseInt(selectedOpt.dataset.flete) : 0;
   const ft=Math.round(ing*FEE),cm=Math.round(ing*COM),total=cp+fl+ft+cm+co+cr+cf+cx,util=ing-total,mg=ing>0?(util/ing*100).toFixed(1):0;
   const el=$('rRes');el.style.display='block';
   el.innerHTML='<div class="rr"><span class="rl">Ingresos del mes</span><span class="rv u">'+fN(ing)+'</span></div><div class="rr"><span class="rl">Costo productos (landed)</span><span class="rv n">- '+fN(cp)+'</span></div><div class="rr"><span class="rl">Flete a nuestro cargo</span><span class="rv n">- '+fN(fl)+'</span></div><div class="rr"><span class="rl">Fee TASA (15%)</span><span class="rv n">- '+fN(ft)+'</span></div><div class="rr"><span class="rl">Comision vendedores (4.3%)</span><span class="rv n">- '+fN(cm)+'</span></div><div class="rr"><span class="rl">Gastos operativos</span><span class="rv n">- '+fN(co)+'</span></div><div class="rr"><span class="rl">RRHH y sueldos</span><span class="rv n">- '+fN(cr)+'</span></div><div class="rr"><span class="rl">Gastos financieros</span><span class="rv n">- '+fN(cf)+'</span></div><div class="rr"><span class="rl">Otros gastos</span><span class="rv n">- '+fN(cx)+'</span></div><div style="height:1px;background:var(--border-red);margin:4px 0"></div><div class="rr"><span class="rl" style="font-weight:700;color:var(--text)">Utilidad neta estimada</span><span class="rv '+(util>=0?'p':'n')+'" style="font-size:18px">'+fN(util)+'</span></div><div class="rr"><span class="rl">Margen neto</span><span class="rv '+(util>=0?'p':'n')+'">'+mg+'%</span></div>';
@@ -1222,8 +1240,12 @@ function showProdEvo(idx) {
   `;
 
   // Gráfico
-  // Datos reales de facturación por producto
-  const evProd = EVOL_PROD[nombre] || {};
+  // Datos reales por producto — buscar por nombre o código
+  const evolPorProd = D.evol_por_producto || {};
+  // Buscar por código ATURY si existe en topProd
+  const prodInfo = (D.topProd||[]).find(p => p.nombre === nombre);
+  const codigoProd = prodInfo && prodInfo.parte ? prodInfo.parte : nombre;
+  const evProd = evolPorProd[codigoProd] || evolPorProd[nombre] || {};
   const allMesesP = (D.evolucion||[]).map(e=>e.mes);
   const labels = allMesesP;
   const vals = allMesesP.map(m => evProd[m] ? evProd[m].importe : 0);
@@ -1775,6 +1797,10 @@ function showERPComparativa() {
     const mesSheet = (D.evolucion||[]);
     const allMeses = [...new Set([...mesSheet.map(e=>e.mes), ...mesFact.map(m=>m.mes)])].sort();
 
+    const sheetVals = allMeses.map(m => { const e = mesSheet.find(x=>x.mes===m); return e ? e.ventas : 0; });
+    const erpVals   = allMeses.map(m => { const e = mesFact.find(x=>x.mes===m); return e ? e.ventas : 0; });
+    const diffVals  = allMeses.map((m,i) => erpVals[i] - sheetVals[i]);
+
     dc('cERPComp');
     CH.cERPComp = new Chart(document.getElementById('cERPComp'), {
       type: 'bar',
@@ -1782,27 +1808,72 @@ function showERPComparativa() {
         labels: allMeses,
         datasets: [
           {
-            label: 'Pedidos Sheet (lo que pidieron)',
-            data: allMeses.map(m => { const e = mesSheet.find(x=>x.mes===m); return e ? e.ventas : 0; }),
-            backgroundColor: 'rgba(59,130,246,0.6)',
-            borderRadius: 4
+            label: 'Pedidos Sheet',
+            data: sheetVals,
+            backgroundColor: 'rgba(59,130,246,0.7)',
+            borderColor: 'rgba(59,130,246,1)',
+            borderWidth: 1,
+            borderRadius: 4,
+            order: 2
           },
           {
-            label: 'Facturación ERP (lo que salió)',
-            data: allMeses.map(m => { const e = mesFact.find(x=>x.mes===m); return e ? e.ventas : 0; }),
-            backgroundColor: 'rgba(0,200,122,0.6)',
-            borderRadius: 4
+            label: 'Facturación ERP',
+            data: erpVals,
+            backgroundColor: 'rgba(0,200,122,0.7)',
+            borderColor: 'rgba(0,200,122,1)',
+            borderWidth: 1,
+            borderRadius: 4,
+            order: 1
+          },
+          {
+            label: 'Diferencia',
+            data: diffVals,
+            type: 'line',
+            borderColor: '#E8001D',
+            backgroundColor: 'rgba(232,0,29,0.1)',
+            borderWidth: 2,
+            pointBackgroundColor: '#E8001D',
+            pointRadius: 5,
+            fill: true,
+            tension: 0.3,
+            yAxisID: 'y',
+            order: 0
           }
         ]
       },
       options: {
-        plugins: { legend: { position: 'top' } },
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.raw;
+                return ctx.dataset.label + ': ' + (v>=0?'':'-') + '$' + Math.abs(v).toLocaleString('es-AR');
+              }
+            }
+          }
+        },
         scales: {
           x: { grid: { display: false } },
           y: { ticks: { callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,.04)' } }
         }
       }
     });
+
+    // Resumen numérico debajo del gráfico
+    const totalSheet = sheetVals.reduce((s,v)=>s+v,0);
+    const totalERP   = erpVals.reduce((s,v)=>s+v,0);
+    const totalDiff  = totalERP - totalSheet;
+    const pctDiff    = totalSheet > 0 ? (totalDiff/totalSheet*100).toFixed(1) : 0;
+    document.getElementById('erpCompResumen').innerHTML = [
+      {label:'Total pedidos Sheet', val:fmt(totalSheet), color:'var(--blue)'},
+      {label:'Total facturado ERP', val:fmt(totalERP), color:'var(--green)'},
+      {label:'Diferencia', val:(totalDiff>=0?'+':'')+fmt(totalDiff)+' ('+pctDiff+'%)',
+       color:totalDiff<0?'var(--orange)':totalDiff>0?'var(--blue)':'var(--green)'}
+    ].map(r=>`<div style="background:var(--bg4);border-radius:8px;padding:14px;text-align:center">
+      <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:6px">${r.label}</div>
+      <div style="font-size:18px;font-weight:700;color:${r.color}">${r.val}</div>
+    </div>`).join('');
   }
 }
 
