@@ -1781,6 +1781,19 @@ function showERPComparativa() {
   (D.velocity||[]).forEach(v => { if(v.nombre) vel[v.nombre] = v.avg_monthly || 0; });
 
   // ── COMPARATIVA STOCK ──
+  // Pedidos del Sheet por código ATURY (con expansión de combos)
+  const sheetPedidos = {};
+  (D.velocity||[]).forEach(v => {
+    if (v.nombre && v.nombre.startsWith('ATURY')) {
+      sheetPedidos[v.nombre] = v.total_units || 0;
+    }
+  });
+  if (nCombos > 0) {
+    COMBO_CODES.forEach(cod => {
+      sheetPedidos[cod] = (sheetPedidos[cod] || 0) + nCombos;
+    });
+  }
+
   if (ERP_STOCK) {
     const factERP = ERP_FACT || {};
     const rows = Object.entries(ERP_STOCK)
@@ -1811,19 +1824,7 @@ function showERPComparativa() {
 
   // ── COMPARATIVA FACTURACIÓN ──
   if (ERP_FACT) {
-    // Pedidos del Sheet por código ATURY (incluyendo expansión de combos)
-    const sheetPedidos = {};
-    (D.velocity||[]).forEach(v => {
-      if (v.nombre && v.nombre.startsWith('ATURY')) {
-        sheetPedidos[v.nombre] = v.total_units || 0;
-      }
-    });
-    // Expandir combos: cada combo vendido aporta 1 unidad de cada código
-    if (nCombos > 0) {
-      COMBO_CODES.forEach(cod => {
-        sheetPedidos[cod] = (sheetPedidos[cod] || 0) + nCombos;
-      });
-    }
+    // sheetPedidos ya definido arriba
 
     const allCodes = new Set([
       ...Object.keys(sheetPedidos),
