@@ -549,8 +549,11 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
         <label style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--text-2);cursor:pointer;font-family:'DM Sans',sans-serif" for="fileFact">📂 Cargar CSV</label>
         <input type="file" id="fileFact" accept=".csv" style="display:none" onchange="loadFactCSV(this)">
       </div>
+      <div>
+        <button onclick="showERPComparativa()" style="background:var(--bg4);border:1px solid var(--border);color:var(--text-2);border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">📊 Ver gráfico comparativo</button>
+      </div>
       <div id="erpCompBtn" style="display:none">
-        <button onclick="showERPComparativa()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Ver comparativa ERP</button>
+        <button onclick="showERPComparativa()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">🔄 Actualizar con ERP</button>
       </div>
     </div>
     <div id="erpComparativa" style="display:none;margin-bottom:24px">
@@ -1627,19 +1630,32 @@ function loadStockCSV(input) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function(e) {
+    // Intentar UTF-8 primero, luego latin1
     const rows = parseCSVText(e.target.result);
+    if (rows.length === 0) { alert('CSV vacío'); return; }
+
+    const keys = Object.keys(rows[0]);
+    console.log('Columnas CSV Stock:', keys);
+
+    const findCol = (...names) => keys.find(k => names.some(n => k.toLowerCase().includes(n.toLowerCase()))) || '';
+    const colCod = findCol('Producto');
+    const colQty = findCol('Cantidad1', 'Cantidad', 'Stock', 'Qty');
+
     ERP_STOCK = {};
     rows.forEach(r => {
-      const cod = (r['Producto'] || '').trim();
-      const qty = parseNumAR(r['Cantidad1'] || r['Cantidad'] || '0');
+      const cod = (r[colCod] || '').trim();
+      const qty = parseNumAR(r[colQty] || '0');
       if (cod) ERP_STOCK[cod] = qty;
     });
+
     const count = Object.keys(ERP_STOCK).length;
     document.getElementById('erpStockStatus').textContent = count + ' productos cargados';
     document.getElementById('erpStockStatus').style.color = 'var(--green)';
+    console.log('ERP Stock cargado:', count, 'productos');
     checkERPReady();
   };
-  reader.readAsText(file, 'UTF-8');
+  // Intentar ambos encodings
+  try { reader.readAsText(file, 'UTF-8'); } catch(e) { reader.readAsText(file, 'latin1'); }
 }
 
 function loadFactCSV(input) {
@@ -1648,27 +1664,72 @@ function loadFactCSV(input) {
   const reader = new FileReader();
   reader.onload = function(e) {
     const rows = parseCSVText(e.target.result);
+    if (rows.length === 0) { alert('CSV vacío o formato incorrecto'); return; }
+
+    // Detectar nombres de columnas flexiblemente
+    const sampleRow = rows[0];
+    const keys = Object.keys(sampleRow);
+    console.log('Columnas CSV Facturación:', keys);
+
+    const findCol = (...names) => keys.find(k => names.some(n => k.toLowerCase().includes(n.toLowerCase()))) || '';
+    const colCod  = findCol('Producto', 'Código', 'Part');
+    const colUds  = findCol('Cantidad');
+    const colImp  = findCol('Importe');
+    const colFech = findCol('Año - mes', 'Mes', 'Fecha', 'Date');
+    const colCli  = findCol('Cliente', 'Customer');
+
+    console.log('Columnas detectadas:', {colCod, colUds, colImp, colFech});
+
     ERP_FACT = {};
     const byMes = {};
+    const byCli = {};
+
     rows.forEach(r => {
-      const cod = (r['Producto'] || '').trim();
+      const cod = (r[colCod] || '').trim();
       if (!cod || (!cod.startsWith('ATURY') && !cod.startsWith('CS0640'))) return;
-      const uds = parseNumAR(r['Cantidad'] || '0');
-      const imp = parseNumAR(r['Importe'] || r['Importe mon. principal'] || '0');
-      const mes = (r['Año - mes'] || r['Mes - fecha'] || '').substring(0,7);
+      const uds = parseNumAR(r[colUds] || '0');
+      const imp = parseNumAR(r[colImp] || '0');
+
+      // Extraer mes: puede venir como "2026-04", "04/2026", o fecha completa
+      let mesRaw = (r[colFech] || '').toString().trim();
+      let mes = '';
+      if (mesRaw.match(/^\d{4}-\d{2}/)) {
+        mes = mesRaw.substring(0,7); // "2026-04"
+      } else if (mesRaw.match(/^\d{2}\/\d{4}/)) {
+        const parts = mesRaw.split('/');
+        mes = parts[1] + '-' + parts[0]; // "04/2026" → "2026-04"
+      } else if (mesRaw.match(/^\d{1,2}\/\d{1,2}\/\d{4}/)) {
+        const parts = mesRaw.split('/');
+        mes = parts[2] + '-' + parts[1].padStart(2,'0'); // "20/04/2026" → "2026-04"
+      }
+
       if (!ERP_FACT[cod]) ERP_FACT[cod] = {uds:0, importe:0};
       ERP_FACT[cod].uds     += uds;
       ERP_FACT[cod].importe += imp;
+
       if (mes) {
         if (!byMes[mes]) byMes[mes] = {mes, ventas:0, uds:0};
         byMes[mes].ventas += imp;
         byMes[mes].uds    += uds;
       }
+
+      // Por cliente
+      const cli = (r[colCli] || '').trim();
+      if (cli) {
+        if (!byCli[cli]) byCli[cli] = {importe:0, uds:0};
+        byCli[cli].importe += imp;
+        byCli[cli].uds     += uds;
+      }
     });
+
     ERP_FACT._byMes = Object.values(byMes).sort((a,b) => a.mes.localeCompare(b.mes));
+    ERP_FACT._byCli = byCli;
+
     const count = Object.keys(ERP_FACT).filter(k => !k.startsWith('_')).length;
-    document.getElementById('erpFactStatus').textContent = count + ' productos cargados';
+    const meses = ERP_FACT._byMes.map(m=>m.mes).join(', ');
+    document.getElementById('erpFactStatus').textContent = count + ' productos | ' + ERP_FACT._byMes.length + ' meses';
     document.getElementById('erpFactStatus').style.color = 'var(--green)';
+    console.log('ERP Facturación cargado:', count, 'productos, meses:', meses);
     checkERPReady();
   };
   reader.readAsText(file, 'latin1');
