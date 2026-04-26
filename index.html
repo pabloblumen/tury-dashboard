@@ -249,6 +249,10 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
 
   <div class="sec" id="sec-vendedores">
     <div class="sh"><h2>Performance de Vendedores</h2><p>Matias y Hernan - Red Toyota Argentina</p></div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+      <select id="filtVendPeriod" class="ci" style="max-width:200px;cursor:pointer" onchange="filterVend()"><option value="">Todo el período</option></select>
+      <select id="filtVendVend" class="ci" style="max-width:160px;cursor:pointer" onchange="filterVend()"><option value="">Ambos vendedores</option><option value="Matias">Solo Matías</option><option value="Hernan">Solo Hernán</option></select>
+    </div>
     <div class="g2" id="vCards"></div>
     <div class="g2" style="margin-bottom:16px">
       <div class="card"><div class="ct">Evolucion Mensual por Vendedor</div><canvas id="cVM" height="160"></canvas></div>
@@ -333,6 +337,11 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
 
   <div class="sec" id="sec-concesionarios">
     <div class="sh"><h2>Analisis de Concesionarios</h2><p id="p-conc">—</p></div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+      <select id="filtConcVend" class="ci" style="max-width:160px;cursor:pointer" onchange="filterConc()"><option value="">Todos los vendedores</option><option value="Matias">Matías</option><option value="Hernan">Hernán</option></select>
+      <select id="filtConcStatus" class="ci" style="max-width:160px;cursor:pointer" onchange="filterConc()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="urgente">Urgente +30d</option><option value="llamar">Llamar 14-30d</option><option value="sin">Sin compras</option></select>
+      <input id="filtConcNombre" class="ci" style="max-width:200px" placeholder="Buscar concesionario..." oninput="filterConc()">
+    </div>
     <div class="g3">
       <div class="kc"><div class="kl">Total</div><div class="kv" id="kConc2">—</div></div>
       <div class="kc"><div class="kl">Con compras activas</div><div class="kv" style="color:var(--green)" id="kAct">—</div></div>
@@ -350,6 +359,10 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
 
   <div class="sec" id="sec-productos">
     <div class="sh"><h2>Analisis de Productos</h2><p id="p-prod">—</p></div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+      <input id="filtProdNombre" class="ci" style="max-width:280px" placeholder="Buscar producto..." oninput="filterProd()">
+      <select id="filtProdStatus" class="ci" style="max-width:180px;cursor:pointer" onchange="filterProd()"><option value="">Todos</option><option value="activo">Con ventas recientes</option><option value="sin">Sin movimiento +30d</option></select>
+    </div>
     <div class="g4">
       <div class="kc"><div class="kl">En catalogo</div><div class="kv" id="kProds">—</div></div>
       <div class="kc"><div class="kl">Con venta este mes</div><div class="kv" style="color:var(--green)" id="kPAct">—</div></div>
@@ -717,7 +730,7 @@ function rKPIs(d){
   $('kVentasSub').textContent=(d.evolucion||[]).length+' meses de operacion';
   $('kUds').textContent=k.total_unidades.toLocaleString();
   $('kConc').textContent='45'; // total red
-  $('kConc2').textContent='45';
+  $('kConc2').textContent=ALL_CONCS.length;
   $('kTicket')// Ticket promedio por pedido = total / ~158 pedidos
   const ticketPorPedido = Math.round(k.total_ventas / 158);
   $('kTicket').textContent=fmt(ticketPorPedido);
@@ -727,7 +740,7 @@ function rKPIs(d){
   $('p-res').textContent='Vision consolidada - '+(d.evolucion||[]).map(e=>e.mes).join(' - ');
   $('p-conc').textContent=k.total_concesionarios+' concesionarios - Red Toyota Argentina';
   $('p-prod').textContent=k.total_productos+' productos en catalogo';
-  $('kAct').textContent=(d.recency||[]).filter(r=>r.dias_sin_compra<=31).length;
+  $('kAct').textContent=(D&&D.topConc)?D.topConc.filter(c=>c.ultima&&c.ultima!=='—'&&Math.round((new Date()-new Date(c.ultima))/86400000)<=30).length:(d.recency||[]).filter(r=>r.dias_sin_compra<=31).length;
   const _nAct=ALL_CONCS.filter(c=>c.activo&&c.dias_sin_compra<=14).length;
   const _nInact=ALL_CONCS.filter(c=>c.activo&&c.dias_sin_compra>14).length;
   const _nNunca=ALL_CONCS.filter(c=>!c.activo).length;
@@ -773,10 +786,23 @@ function rCharts(d){
 }
 
 function rTables(d){
-  $('tConc').innerHTML=ALL_CONCS.sort((a,b)=>b.total_ars-a.total_ars).map((c,i)=>{
-  const st=!c.activo?'<span class="tag tag-b">Sin compras</span>':c.dias_sin_compra>30?'<span class="tag tag-r">Urgente</span>':c.dias_sin_compra>14?'<span class="tag tag-o">Llamar</span>':'<span class="tag tag-g">Activo</span>';
+  // Combinar datos vivos del Sheet con ALL_CONCS
+const concDataLive = (D&&D.topConc&&D.topConc.length>0) ? D.topConc.map(c => {
+  const info = ALL_CONCS.find(x=>x.nombre===c.nombre) || {};
+  const dias = c.ultima && c.ultima!=='—' ? Math.round((new Date()-new Date(c.ultima))/86400000) : 999;
+  return {nombre:c.nombre, vendedor:info.vendedor||c.vendedor||'—', activo:true, dias_sin_compra:dias, total_ars:c.importe||0, n_ordenes:c.ordenes||0, ultima:c.ultima||'—'};
+}) : ALL_CONCS.filter(c=>c.activo).sort((a,b)=>b.total_ars-a.total_ars);
+const actNames = new Set(concDataLive.map(c=>c.nombre));
+const sinC = ALL_CONCS.filter(c=>!c.activo && !actNames.has(c.nombre));
+const allConcData = [...concDataLive, ...sinC];
+allConcData_cache = allConcData;
+$('tConc').innerHTML=allConcData.map((c,i)=>{
+  const dias = c.dias_sin_compra||999;
+  const st=(!c.activo||dias>=999)?'<span class="tag tag-b">Sin compras</span>':dias>30?'<span class="tag tag-r">Urgente</span>':dias>14?'<span class="tag tag-o">Llamar</span>':'<span class="tag tag-g">Activo</span>';
   const vc=c.vendedor==='Matias'?'var(--blue)':'var(--red)';
-  return '<tr style="cursor:pointer" onclick="showProdEvo('+i+')" ><td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td><td class="nm">'+p.nombre+'</td><td>'+fN(p.importe)+'</td><td>'+p.unidades+'</td><td>'+(p.ultima||'—')+'</td><td style="font-weight:700;color:'+vc+'">'+va+' u/mes</td></tr>';}).join('');
+  const totalArs=c.total_ars||0;
+  return '<tr style="cursor:pointer" onclick="showConcEvo('+i+')" ><td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td><td class="nm">'+c.nombre+'</td><td style="color:'+vc+';font-size:11px">'+c.vendedor+'</td><td>'+(totalArs>0?fN(totalArs):'—')+'</td><td>'+(c.n_ordenes||'—')+'</td><td>'+(c.ultima||'—')+'</td><td>'+st+'</td></tr>';
+}).join('');;
   $('alProd').innerHTML=(d.sinMovimiento||[]).filter(s=>s.dias>15).map(s=>{const cl=s.dias>35?'r':'o';const nm=s.nombre||s.Producto||'—';const ul=s.ultima||'—';const di=s.dias||0;return '<div class="ai '+cl+'"><div class="ad '+cl+'"></div><div class="at"><strong>'+nm+'</strong>Sin ventas desde '+ul+'</div><div style="font-size:11px;color:var(--text-3);font-weight:600">'+di+'d</div></div>';}).join('');
   $('stDiv').innerHTML=(d.velocity||[]).slice(0,12).map(v=>{const sg=Math.ceil(v.avg_monthly*1.3);const col=v.avg_monthly>=15?'var(--red)':v.avg_monthly>=8?'var(--gold-light)':'var(--blue)';return '<div class="sr"><div><div class="sp2">'+v.nombre+'</div><div style="font-size:10px;color:var(--text-3)">'+v.months+' mes(es)</div></div><div style="text-align:center"><div style="font-size:12px;font-weight:700;color:'+col+'">'+v.avg_monthly+'</div><div style="font-size:10px;color:var(--text-3)">uds/mes</div></div><div style="font-size:12px;color:var(--green);min-width:80px;text-align:right;font-weight:600">Pedir '+sg+'</div></div>';}).join('');
   $('tSt').innerHTML=(STOCK_DATA||[]).map((s,i)=>{
@@ -801,8 +827,8 @@ function rVend(d){
   const mv=d.mensual_por_vendedor||[],ms=[...new Set(mv.map(m=>m.mes))].sort();
   const mD=ms.map(m=>{const x=mv.find(v=>v.mes===m&&v.vendedor==='Matias');return x?x.ventas:0;});
   const hD=ms.map(m=>{const x=mv.find(v=>v.mes===m&&v.vendedor==='Hernan');return x?x.ventas:0;});
-  dc('vm');CH.vm=new Chart($('cVM'),{type:'bar',data:{labels:ms,datasets:[{label:'Matias',data:mD,backgroundColor:'rgba(37,99,235,.8)',borderRadius:4},{label:'Hernan',data:hD,backgroundColor:'rgba(220,38,38,.8)',borderRadius:4}]},options:{plugins:{legend:{position:'top'}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,.04)'}}}}});
-  dc('vp');CH.vp=new Chart($('cVP'),{type:'doughnut',data:{labels:['Matias','Hernan'],datasets:[{data:[mat.ventas||0,her.ventas||0],backgroundColor:['rgba(37,99,235,.8)','rgba(220,38,38,.8)'],borderWidth:2,borderColor:'#18181F'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12}}},cutout:'65%'}});
+  if(!$('cVM'))return;dc('vm');CH.vm=new Chart($('cVM'),{type:'bar',data:{labels:ms,datasets:[{label:'Matias',data:mD,backgroundColor:'rgba(37,99,235,.8)',borderRadius:4},{label:'Hernan',data:hD,backgroundColor:'rgba(220,38,38,.8)',borderRadius:4}]},options:{plugins:{legend:{position:'top'}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,.04)'}}}}});
+  if(!$('cVP'))return;dc('vp');CH.vp=new Chart($('cVP'),{type:'doughnut',data:{labels:['Matias','Hernan'],datasets:[{data:[mat.ventas||0,her.ventas||0],backgroundColor:['rgba(37,99,235,.8)','rgba(220,38,38,.8)'],borderWidth:2,borderColor:'#18181F'}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12}}},cutout:'65%'}});
 }
 
 function vtab(id,btn){
@@ -1053,6 +1079,18 @@ function simC(){
 let MES_FILTRO = '';
 
 function initMesFilter(data) {
+  // También inicializar filtro de período en vendedores
+  const selVP = document.getElementById('filtVendPeriod');
+  if (selVP) {
+    const meses = (data.evolucion || []).map(e => e.mes).sort();
+    selVP.innerHTML = '<option value="">Todo el período</option>';
+    meses.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = m;
+      selVP.appendChild(opt);
+    });
+  }
+
   const sel = document.getElementById('filtroMes');
   if (!sel || !data) return;
   const meses = (data.evolucion || []).map(e => e.mes).sort();
@@ -1625,6 +1663,19 @@ function showERPComparativa() {
   document.getElementById('erpComparativa').scrollIntoView({behavior:'smooth'});
   if (!D) return;
 
+  // Composición del combo — 1 unidad de cada código por combo vendido
+  const COMBO_CODES = [
+    'ATURY11402','ATURY12401','ATURY11403','ATURY11417','ATURY11422',
+    'ATURY11412','ATURY11414','ATURY11405','ATURY11406','ATURY12402',
+    'ATURY12403','ATURY12404','ATURY12412','ATURY12406','ATURY12408',
+    'ATURY12409','ATURY12410','ATURY12415','ATURY03504','ATURY04504',
+    'ATURY09510','ATURY04509','ATURY06507'
+  ];
+
+  // Combos vendidos en el Sheet (buscar CS0640TURY01 en velocity)
+  const combosVendidos = (D.velocity||[]).find(v => v.nombre === 'CS0640TURY01' || v.nombre === 'Kit combo inicial');
+  const nCombos = combosVendidos ? combosVendidos.total_units : 0;
+
   const COMPRAS = {
     'ATURY11401':16,'ATURY11402':41,'ATURY11420':31,'ATURY12401':41,
     'ATURY11415':12,'ATURY11403':41,'ATURY11416':4,'ATURY11417':44,
@@ -1653,7 +1704,9 @@ function showERPComparativa() {
       .filter(([cod]) => cod.startsWith('ATURY'))
       .map(([cod, erpQty]) => {
         const comprado = COMPRAS[cod] || 0;
-        const facturado = factERP[cod] ? factERP[cod].uds : 0;
+        // Si hay ERP de facturación usar ese, sino usar velocity del Sheet + combos
+        const sheetUds = (sheetPedidos && sheetPedidos[cod]) ? sheetPedidos[cod] : 0;
+        const facturado = factERP[cod] ? factERP[cod].uds : sheetUds;
         const teorico = comprado - facturado;
         const diff = erpQty - teorico;
         return {cod, comprado, facturado, teorico, erp: erpQty, diff, vel: vel[cod]||0};
@@ -1675,13 +1728,19 @@ function showERPComparativa() {
 
   // ── COMPARATIVA FACTURACIÓN ──
   if (ERP_FACT) {
-    // Pedidos del Sheet por código ATURY
+    // Pedidos del Sheet por código ATURY (incluyendo expansión de combos)
     const sheetPedidos = {};
     (D.velocity||[]).forEach(v => {
       if (v.nombre && v.nombre.startsWith('ATURY')) {
         sheetPedidos[v.nombre] = v.total_units || 0;
       }
     });
+    // Expandir combos: cada combo vendido aporta 1 unidad de cada código
+    if (nCombos > 0) {
+      COMBO_CODES.forEach(cod => {
+        sheetPedidos[cod] = (sheetPedidos[cod] || 0) + nCombos;
+      });
+    }
 
     const allCodes = new Set([
       ...Object.keys(sheetPedidos),
@@ -1745,6 +1804,100 @@ function showERPComparativa() {
       }
     });
   }
+}
+
+
+// ============================================================
+// FUNCIONES DE FILTRADO
+// ============================================================
+let _allConcData = [];
+let _allProdData = [];
+
+function filterConc() {
+  const vend   = document.getElementById('filtConcVend')?.value || '';
+  const status = document.getElementById('filtConcStatus')?.value || '';
+  const nombre = (document.getElementById('filtConcNombre')?.value || '').toLowerCase();
+
+  let data = _allConcData.length ? _allConcData : allConcData_cache || [];
+
+  if (vend)   data = data.filter(c => c.vendedor === vend);
+  if (nombre) data = data.filter(c => c.nombre.toLowerCase().includes(nombre));
+  if (status === 'activo')  data = data.filter(c => c.activo && (c.dias_sin_compra||999) <= 14);
+  if (status === 'urgente') data = data.filter(c => c.activo && (c.dias_sin_compra||999) > 30 && (c.dias_sin_compra||999) < 999);
+  if (status === 'llamar')  data = data.filter(c => c.activo && (c.dias_sin_compra||999) > 14 && (c.dias_sin_compra||999) <= 30);
+  if (status === 'sin')     data = data.filter(c => !c.activo || (c.dias_sin_compra||999) >= 999);
+
+  $('tConc').innerHTML = data.map((c,i) => {
+    const dias = c.dias_sin_compra || 999;
+    const st = !c.activo||dias>=999 ? '<span class="tag tag-b">Sin compras</span>' :
+               dias>30 ? '<span class="tag tag-r">Urgente</span>' :
+               dias>14 ? '<span class="tag tag-o">Llamar</span>' : '<span class="tag tag-g">Activo</span>';
+    const vc = c.vendedor==='Matias' ? 'var(--blue)' : 'var(--red)';
+    const totalArs = c.total_ars||c.importe||0;
+    return '<tr style="cursor:pointer" onclick="showConcEvo('+i+')" >' +
+      '<td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td>' +
+      '<td class="nm">'+c.nombre+'</td>' +
+      '<td style="color:'+vc+';font-size:11px">'+c.vendedor+'</td>' +
+      '<td>'+(totalArs>0?fN(totalArs):'—')+'</td>' +
+      '<td>'+(c.n_ordenes||c.ordenes||'—')+'</td>' +
+      '<td>'+(c.ultima||'—')+'</td>' +
+      '<td>'+st+'</td></tr>';
+  }).join('');
+}
+let allConcData_cache = [];
+
+function filterProd() {
+  const nombre = (document.getElementById('filtProdNombre')?.value || '').toLowerCase();
+  const status = document.getElementById('filtProdStatus')?.value || '';
+  if (!D) return;
+
+  let data = D.topProd || [];
+  if (nombre) data = data.filter(p => p.nombre.toLowerCase().includes(nombre));
+  if (status === 'activo') data = data.filter(p => p.ultima && Math.round((new Date()-new Date(p.ultima))/86400000) <= 30);
+  if (status === 'sin')    data = data.filter(p => p.ultima && Math.round((new Date()-new Date(p.ultima))/86400000) > 30);
+
+  $('tProd').innerHTML = data.map((p,i) => {
+    const vel = (D.velocity||[]).find(v=>v.nombre===p.nombre);
+    const va = vel ? vel.avg_monthly : '—';
+    const vc = vel ? (vel.avg_monthly>=15?'var(--red)':vel.avg_monthly>=8?'var(--gold-light)':'var(--text-2)') : 'var(--text-3)';
+    return '<tr style="cursor:pointer" onclick="showProdEvo('+i+')" >' +
+      '<td style="color:var(--text-3);font-size:11px">'+(i+1)+'</td>' +
+      '<td class="nm">'+p.nombre+'</td>' +
+      '<td>'+fN(p.importe)+'</td>' +
+      '<td>'+p.unidades+'</td>' +
+      '<td>'+(p.ultima||'—')+'</td>' +
+      '<td style="font-weight:700;color:'+vc+'">'+va+' u/mes</td></tr>';
+  }).join('');
+}
+
+function filterVend() {
+  if (!D) return;
+  const vend   = document.getElementById('filtVendVend')?.value || '';
+  const period = document.getElementById('filtVendPeriod')?.value || '';
+
+  // Filtrar mensual por vendedor
+  let mvData = D.mensual_por_vendedor || [];
+  if (vend)   mvData = mvData.filter(m => m.vendedor === vend);
+  if (period) mvData = mvData.filter(m => m.mes === period);
+
+  // Re-renderizar gráficos con datos filtrados
+  const meses = [...new Set(mvData.map(m=>m.mes))].sort();
+  const vendores = vend ? [vend] : ['Matias','Hernan'];
+  const colors = {'Matias':'rgba(37,99,235,.8)','Hernan':'rgba(220,38,38,.8)'};
+
+  dc('vm');
+  if($('cVM')) CH.vm = new Chart($('cVM'), {
+    type:'bar',
+    data:{
+      labels: meses,
+      datasets: vendores.map(v=>({
+        label: v,
+        data: meses.map(m=>{const x=mvData.find(d=>d.mes===m&&d.vendedor===v);return x?x.ventas:0;}),
+        backgroundColor: colors[v], borderRadius:4
+      }))
+    },
+    options:{plugins:{legend:{position:'top'}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmt(v)},grid:{color:'rgba(255,255,255,.04)'}}}}
+  });
 }
 
 window.addEventListener('load',()=>{
