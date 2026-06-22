@@ -218,6 +218,7 @@ td .nm{color:var(--text);font-weight:500}
        <div class="frm">
         <label>Costo de mercaderia<span>% s/ ingresos</span><input type="number" id="aCogs" value="60"></label>
         <label>Comision vendedores<span>%</span><input type="number" id="aCom" value="4.3"></label>
+        <label>Fee Toyota / TASA<span>% s/ ingresos</span><input type="number" id="aFee" value="15"></label>
         <label>Otros costos variables<span>%</span><input type="number" id="aVar" value="5"></label>
         <label>Gastos fijos del periodo<span>$</span><input type="number" id="aFix" value="0"></label>
        </div>
@@ -315,7 +316,7 @@ function chips(){
  c.querySelectorAll('.fchip').forEach(el=>el.onclick=()=>{a[+el.dataset.ci][1]();render()});
 }
 $$('.ni').forEach(n=>n.onclick=()=>go(n.dataset.go));
-function go(id){CUR=id;$$('.ni').forEach(n=>n.classList.toggle('active',n.dataset.go===id));
+function go(id){if(id==='negocio'&&!window.__negOK){if(prompt('Contraseña para ver Negocio')!=='Rosita')return;window.__negOK=true;}CUR=id;$$('.ni').forEach(n=>n.classList.toggle('active',n.dataset.go===id));
  $$('.sec').forEach(s=>s.classList.remove('on'));$('#s-'+id).classList.add('on');
  $('#ptit').textContent={resumen:'Resumen General',productos:'Análisis de Productos',conces:'Concesionarios',estados:'Estados de Pedido',oport:'Oportunidades',negocio:'Negocio',vendedores:'Vendedores'}[id];
  render()}
@@ -451,13 +452,13 @@ function oCross(rows){
 function rNegocio(){const t=$('.tb-b[data-nt].on');const nt=t?t.dataset.nt:'rent';if(nt==='rent')rRent();else rImp();}
 function rRent(){
  const rows=rf();const ing=sum(rows,C.imp);const ret=sum(rows,C.retail);
- const cogs=+$('#aCogs').value||0,com=+$('#aCom').value||0,varc=+$('#aVar').value||0,fix=+$('#aFix').value||0;
- const cMerc=ing*cogs/100,cCom=ing*com/100,cVar=ing*varc/100;const mb=ing-cMerc;const res=mb-cCom-cVar-fix;
+ const cogs=+$('#aCogs').value||0,com=+$('#aCom').value||0,fee=+$('#aFee').value||0,varc=+$('#aVar').value||0,fix=+$('#aFix').value||0;
+ const cMerc=ing*cogs/100,cCom=ing*com/100,cFee=ing*fee/100,cVar=ing*varc/100;const mb=ing-cMerc;const res=mb-cFee-cCom-cVar-fix;
  banner($('#negKpi'),[['Ingresos TASA',fmt(ing),'var(--gold)',rows.length+' líneas'],['Valor retail red',fmt(ret),'var(--blue)','lo que cobra el concesionario'],['Markup canal',ing?Math.round(100*(ret-ing)/ing)+'%':'—','var(--green)','retail vs dealer'],['Resultado estimado',fmt(res),res>=0?'var(--green)':'var(--red)',ing?Math.round(100*res/ing)+'% s/ ventas':'']]);
- const pnl=[['Ingresos (venta dealer)',ing,'var(--gold-light)',1],['− Costo de mercadería',-cMerc,'var(--red)',0],['= Margen bruto',mb,'var(--green)',1],['− Comisión vendedores',-cCom,'var(--orange)',0],['− Otros costos variables',-cVar,'var(--orange)',0],['− Gastos fijos',-fix,'var(--orange)',0],['= Resultado',res,res>=0?'var(--green)':'var(--red)',1]];
+ const pnl=[['Ingresos (venta dealer)',ing,'var(--gold-light)',1],['− Costo de mercadería',-cMerc,'var(--red)',0],['= Margen bruto',mb,'var(--green)',1],['− Fee Toyota / TASA',-cFee,'var(--orange)',0],['− Comisión vendedores',-cCom,'var(--orange)',0],['− Otros costos variables',-cVar,'var(--orange)',0],['− Gastos fijos',-fix,'var(--orange)',0],['= Resultado',res,res>=0?'var(--green)':'var(--red)',1]];
  $('#negPnl').innerHTML='<table>'+pnl.map(p=>`<tr><td class="${p[3]?'nm':''}">${p[0]}</td><td style="text-align:right;color:${p[2]};font-weight:600">${fN(p[1])}</td></tr>`).join('')+'</table>';
  $('#negNote').innerHTML='Margen bruto '+(ing?Math.round(100*mb/ing):0)+'%. Los supuestos se guardan en este navegador. Cambialos por tus costos reales para que el resultado sea fiel.';
- const steps=[['Ingresos',ing],['Costo merc.',-cMerc],['Comisión',-cCom],['Otros var.',-cVar],['Fijos',-fix],['Resultado',res]];
+ const steps=[['Ingresos',ing],['Costo merc.',-cMerc],['Fee TASA',-cFee],['Comisión',-cCom],['Otros var.',-cVar],['Fijos',-fix],['Resultado',res]];
  const mxw=Math.max(...steps.map(x=>Math.abs(x[1])),1);
  $('#negWf').innerHTML=steps.map(x=>{const neg=x[1]<0;return `<div class="bar"><div class="nm" style="width:24%">${x[0]}</div><div class="track"><div class="fill" style="width:${Math.max(2,100*Math.abs(x[1])/mxw)}%;background:${neg?'var(--red)':'var(--gold)'}"></div></div><div class="val">${fN(x[1])}</div></div>`}).join('');
 }
@@ -471,7 +472,7 @@ function rImp(){
  $('#impWf').innerHTML='<div style="display:flex;height:30px;border-radius:8px;overflow:hidden;margin-bottom:10px">'+comp.map((c,i)=>`<div title="${c[0]} ${fN(c[1])}" style="width:${100*c[1]/tot}%;background:${cols[i]}"></div>`).join('')+'</div><div style="display:flex;gap:10px;flex-wrap:wrap">'+comp.map((c,i)=>`<span class="pill"><span class="dot" style="background:${cols[i]}"></span>${c[0]} · ${fN(c[1])} · ${Math.round(100*c[1]/tot)}%</span>`).join('')+'</div>';
 }
 $$('.tb-b[data-nt]').forEach(b=>b.onclick=()=>{$$('.tb-b[data-nt]').forEach(x=>x.classList.remove('on'));b.classList.add('on');['rent','imp'].forEach(t=>$('#nt-'+t).style.display=t===b.dataset.nt?'':'none');rNegocio()});
-['aCogs','aCom','aVar','aFix','iFob','iQty','iTc','iFre','iDer','iEst','iLog','iMar'].forEach(id=>{const el=$('#'+id);if(el){try{const sv=localStorage.getItem('tury_'+id);if(sv!==null)el.value=sv;}catch(e){}el.addEventListener('input',()=>{try{localStorage.setItem('tury_'+id,el.value)}catch(e){}rNegocio()})}});
+['aCogs','aCom','aFee','aVar','aFix','iFob','iQty','iTc','iFre','iDer','iEst','iLog','iMar'].forEach(id=>{const el=$('#'+id);if(el){try{const sv=localStorage.getItem('tury_'+id);if(sv!==null)el.value=sv;}catch(e){}el.addEventListener('input',()=>{try{localStorage.setItem('tury_'+id,el.value)}catch(e){}rNegocio()})}});
 
 function rVend(){
  const rows=rf();const vs=['Hernan','Matias'];const col={Hernan:'#3b82f6',Matias:'#ef4444'};
@@ -483,7 +484,7 @@ function rVend(){
  dc('vm');CH.vm=new Chart($('#cVendMes'),{type:'bar',data:{labels:months.map(mlabel),datasets:vs.map(v=>({label:vlabel(v),data:months.map(m=>mg[m][v]),backgroundColor:col[v],borderRadius:4}))},options:{plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fN(c.raw)}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:fmt},grid:{color:'rgba(255,255,255,.04)'}}}}});
  dc('vp');CH.vp=new Chart($('#cVendPart'),{type:'doughnut',data:{labels:vs.map(vlabel),datasets:[{data:vs.map(v=>agg[v].imp),backgroundColor:vs.map(v=>col[v]),borderColor:'#13131c',borderWidth:2}]},options:{cutout:'62%',plugins:{legend:{position:'right'},tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.raw)}}}}});
  const ca=concAgg(rows);
- $('#vendCart').innerHTML='<div class="grid2">'+vs.map(v=>{const list=ca.filter(c=>c.v===v);const mx=list[0]?list[0].imp:0;return '<div><div class="ct" style="color:'+col[v]+'">'+vlabel(v)+' · '+list.length+' activos · '+fmt(list.reduce((a,c)=>a+c.imp,0))+'</div>'+(list.map(c=>{const st=c.d<=14?'tg':c.d<=30?'tb':c.d<=60?'to':'tr';return '<div class="bar"><div class="nm" style="width:42%" title="'+c.c+'">'+c.c+'</div><div class="track"><div class="fill" style="width:'+Math.max(2,100*c.imp/(mx||1))+'%;background:'+col[v]+'"></div></div><div class="val">'+fmt(c.imp)+'</div><div style="width:44px;text-align:right"><span class="tag '+st+'">'+c.d+'d</span></div></div>'}).join('')||'<div class="muted">Sin actividad</div>')+'</div>'}).join('')+'</div>';
+ $('#vendCart').innerHTML='<div class="grid2">'+vs.map(v=>{const list=ca.filter(c=>c.v===v);const have=new Set(list.map(c=>nrm(c.c)));const missing=(VENDMAP[v]||[]).filter(nm=>!have.has(nrm(nm))).map(nm=>({c:nm,imp:0,nobuy:true}));const full=list.concat(missing);const mx=list[0]?list[0].imp:0;return '<div><div class="ct" style="color:'+col[v]+'">'+vlabel(v)+' · '+list.length+' activos · '+missing.length+' sin comprar · '+fmt(list.reduce((a,c)=>a+c.imp,0))+'</div>'+(full.map(c=>{if(c.nobuy)return '<div class="bar"><div class="nm" style="width:42%" title="'+c.c+'">'+c.c+'</div><div class="track"><div class="fill" style="width:2%;background:var(--bg4)"></div></div><div class="val">'+fmt(0)+'</div><div style="width:64px;text-align:right"><span class="tag tn">sin comprar</span></div></div>';const st=c.d<=14?'tg':c.d<=30?'tb':c.d<=60?'to':'tr';return '<div class="bar"><div class="nm" style="width:42%" title="'+c.c+'">'+c.c+'</div><div class="track"><div class="fill" style="width:'+Math.max(2,100*c.imp/(mx||1))+'%;background:'+col[v]+'"></div></div><div class="val">'+fmt(c.imp)+'</div><div style="width:44px;text-align:right"><span class="tag '+st+'">'+c.d+'d</span></div></div>'}).join('')||'<div class="muted">Sin actividad</div>')+'</div>'}).join('')+'</div>';
 }
 
 initFilters();render();liveLoad();
