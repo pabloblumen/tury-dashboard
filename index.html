@@ -227,6 +227,7 @@ td .nm{color:var(--text);font-weight:500}
       <div class="card"><div class="ct">Resultado estimado</div><div id="negPnl"></div></div>
      </div>
      <div class="card"><div class="ct">Cascada de resultado</div><div id="negWf"></div></div>
+    <div class="card"><div class="ct">Desagregado por mes <span class="muted" style="margin-left:auto;text-transform:none;letter-spacing:0">sólo cerrado y facturado</span></div><div id="negMes"></div></div>
     </div>
     <div id="nt-imp" style="display:none">
      <div class="grid2">
@@ -451,16 +452,17 @@ function oCross(rows){
 /* ===== NEGOCIO ===== */
 function rNegocio(){const t=$('.tb-b[data-nt].on');const nt=t?t.dataset.nt:'rent';if(nt==='rent')rRent();else rImp();}
 function rRent(){
- const rows=rf();const ing=sum(rows,C.imp);const ret=sum(rows,C.retail);
+ const rows=rf().filter(r=>r[5]==='CER'||r[5]==='FAC');const ing=sum(rows,C.imp);const ret=sum(rows,C.retail);
  const cogs=+$('#aCogs').value||0,com=+$('#aCom').value||0,fee=+$('#aFee').value||0,varc=+$('#aVar').value||0,fix=+$('#aFix').value||0;
  const cMerc=ing*cogs/100,cCom=ing*com/100,cFee=ing*fee/100,cVar=ing*varc/100;const mb=ing-cMerc;const res=mb-cFee-cCom-cVar-fix;
- banner($('#negKpi'),[['Ingresos TASA',fmt(ing),'var(--gold)',rows.length+' líneas'],['Valor retail red',fmt(ret),'var(--blue)','lo que cobra el concesionario'],['Markup canal',ing?Math.round(100*(ret-ing)/ing)+'%':'—','var(--green)','retail vs dealer'],['Resultado estimado',fmt(res),res>=0?'var(--green)':'var(--red)',ing?Math.round(100*res/ing)+'% s/ ventas':'']]);
+ banner($('#negKpi'),[['Ingresos TASA',fmt(ing),'var(--gold)',rows.length+' líneas'],['Valor retail red',fmt(ret),'var(--blue)','lo que cobra el concesionario'],['Resultado estimado',fmt(res),res>=0?'var(--green)':'var(--red)',ing?Math.round(100*res/ing)+'% s/ ventas':'']]);
  const pnl=[['Ingresos (venta dealer)',ing,'var(--gold-light)',1],['− Costo de mercadería',-cMerc,'var(--red)',0],['= Margen bruto',mb,'var(--green)',1],['− Fee Toyota / TASA',-cFee,'var(--orange)',0],['− Comisión vendedores',-cCom,'var(--orange)',0],['− Otros costos variables',-cVar,'var(--orange)',0],['− Gastos fijos',-fix,'var(--orange)',0],['= Resultado',res,res>=0?'var(--green)':'var(--red)',1]];
  $('#negPnl').innerHTML='<table>'+pnl.map(p=>`<tr><td class="${p[3]?'nm':''}">${p[0]}</td><td style="text-align:right;color:${p[2]};font-weight:600">${fN(p[1])}</td></tr>`).join('')+'</table>';
  $('#negNote').innerHTML='Margen bruto '+(ing?Math.round(100*mb/ing):0)+'%. Los supuestos se guardan en este navegador. Cambialos por tus costos reales para que el resultado sea fiel.';
  const steps=[['Ingresos',ing],['Costo merc.',-cMerc],['Fee TASA',-cFee],['Comisión',-cCom],['Otros var.',-cVar],['Fijos',-fix],['Resultado',res]];
  const mxw=Math.max(...steps.map(x=>Math.abs(x[1])),1);
  $('#negWf').innerHTML=steps.map(x=>{const neg=x[1]<0;return `<div class="bar"><div class="nm" style="width:24%">${x[0]}</div><div class="track"><div class="fill" style="width:${Math.max(2,100*Math.abs(x[1])/mxw)}%;background:${neg?'var(--red)':'var(--gold)'}"></div></div><div class="val">${fN(x[1])}</div></div>`}).join('');
+ const mg={};rows.forEach(r=>{const m=r[1].slice(0,7);if(!mg[m])mg[m]={ing:0};mg[m].ing+=r[3];});const mks=months.filter(m=>mg[m]);$('#negMes').innerHTML='<table><tr style="color:var(--text-3);font-size:11px"><td>MES</td><td style="text-align:right">INGRESOS</td><td style="text-align:right">RESULTADO</td><td style="text-align:right">MG%</td></tr>'+mks.map(m=>{const mi=mg[m].ing,mfix=ing?fix*mi/ing:0,mr=mi-mi*(cogs+fee+com+varc)/100-mfix,mp=mi?Math.round(100*mr/mi):0;return `<tr><td>${mlabel(m)}</td><td style="text-align:right">${fN(mi)}</td><td style="text-align:right;color:${mr>=0?'var(--green)':'var(--red)'};font-weight:600">${fN(mr)}</td><td style="text-align:right">${mp}%</td></tr>`}).join('')+`<tr style="border-top:1px solid var(--border)"><td class="nm">Total</td><td style="text-align:right;font-weight:600">${fN(ing)}</td><td style="text-align:right;font-weight:600;color:${res>=0?'var(--green)':'var(--red)'}">${fN(res)}</td><td style="text-align:right">${ing?Math.round(100*res/ing):0}%</td></tr>`+'</table>';
 }
 function rImp(){
  const fob=+$('#iFob').value||0,qty=+$('#iQty').value||0,tc=+$('#iTc').value||0,fre=+$('#iFre').value||0,der=+$('#iDer').value||0,est=+$('#iEst').value||0,log=+$('#iLog').value||0,mar=+$('#iMar').value||0;
