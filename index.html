@@ -130,6 +130,16 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 @media(max-width:900px){.sidebar{width:60px;}.logo-t,.logo-s,.ni span,.nb,.sf{display:none;}.main{margin-left:60px;}.g4{grid-template-columns:1fr 1fr;}.g2,.g3{grid-template-columns:1fr;}.sec{padding:16px;}}
+.tmx-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.tmx-k .kc{cursor:pointer;padding:12px 16px}.tmx-k .kc.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.tmx-w{overflow:auto;max-height:620px;border-radius:8px}
+.tmx{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums}
+.tmx th{position:sticky;top:0;background:var(--bg3);z-index:2;text-align:right;padding:8px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);border-bottom:1px solid var(--border);white-space:nowrap}
+.tmx td{text-align:right;white-space:nowrap;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-2)}
+.tmx .n{text-align:left;position:sticky;left:0;background:var(--bg3);z-index:1;max-width:210px;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:500}
+.tmx th.n{z-index:3}.tmx .rk{text-align:left;color:var(--text-3);width:26px}.tmx td.z{color:var(--text-3)}
+.tmx .tot{color:var(--text);font-weight:700}
+.tmx tfoot td{position:sticky;bottom:0;background:var(--bg4);font-weight:700;color:var(--text);z-index:2}
 </style>
 </head>
 <body>
@@ -346,6 +356,17 @@ body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;min
       <div class="kc"><div class="kl">Total</div><div class="kv" id="kConc2">—</div></div>
       <div class="kc"><div class="kl">Con compras activas</div><div class="kv" style="color:var(--green)" id="kAct">—</div></div>
       <div class="kc hi"><div class="kl">Requieren contacto</div><div class="kv" id="kUrg">—</div><div class="ks">+25 dias sin comprar</div></div>
+    </div>
+    <div class="card" id="tmxCard" style="margin-bottom:16px">
+      <div class="ct" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">Compras por concesionario y mes <span id="tmxSub" style="margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500"></span></div>
+      <div class="tmx-k" id="tmxKpi"></div>
+      <div style="display:flex;gap:10px;margin:0 0 12px;flex-wrap:wrap">
+        <input id="tmxQ" class="ci" style="max-width:220px" placeholder="Buscar concesionario...">
+        <select id="tmxSort" class="ci" style="max-width:230px;cursor:pointer"><option value="tot">Ranking (total)</option><option value="trd">Tendencia: peores primero</option><option value="tr">Tendencia: mejores primero</option><option value="last">Último mes cerrado</option><option value="idle">Meses sin comprar</option><option value="c">Nombre</option></select>
+        <select id="tmxScale" class="ci" style="max-width:270px;cursor:pointer"><option value="row">Color por concesionario (evolución)</option><option value="all">Color global (ranking)</option></select>
+      </div>
+      <div class="tmx-w"><table class="tmx" id="tmxT"></table></div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:10px;line-height:1.6"><b style="color:var(--text-2)">Cómo se lee:</b> valor dealer en millones de $, sin pedidos cancelados; respeta el filtro de vendedor. <b style="color:var(--text-2)">Tendencia</b> = lo que compró en su último mes cerrado con compras (el mes en curso no entra porque está incompleto), comparado con el promedio mensual de los 3 meses anteriores a ese mes (los meses sin compras cuentan como cero). Ej.: "+35% Sep vs Jun–Ago" = en septiembre compró 35% más que su promedio de junio a agosto. Creciendo = más de +20%; cayendo = menos de −20%. <b style="color:var(--text-2)">Sin compras 2+ meses</b> = ya pasaron 2 meses cerrados o más desde su última compra (se marca en rojo en "Últ. compra"). Pasando el mouse sobre la tendencia se ven los importes.</div>
     </div>
     <div class="card" style="margin-bottom:16px"><div class="ct">Ranking Completo</div>
       <table class="dt"><thead><tr><th>#</th><th>Concesionario</th><th>Vendedor</th><th>Ventas Totales</th><th>Ordenes</th><th>Ultima Compra</th><th>Estado</th></tr></thead>
@@ -2049,6 +2070,65 @@ window.addEventListener('load',()=>{
     usarDemo();
   });
 });
+</script>
+<script>
+/* ===== Cuadro concesionario x mes (TMX) ===== */
+(function(){
+const SNAP={"gen":"2026-10-20","d":{"Alem Sur S.A.":{"2026-01":4350116,"2026-05":418653,"2026-09":2028669,"2026-10":3070297},"TM S.A.":{"2026-01":513928,"2026-04":243614,"2026-05":418653,"2026-06":418653,"2026-07":403556,"2026-09":1208625},"Autonort S.A.":{"2026-01":5608678,"2026-02":4350116,"2026-03":17345477,"2026-04":11828847,"2026-05":3847131,"2026-06":14929730,"2026-07":1865392,"2026-08":5701180,"2026-09":6356061,"2026-10":2476706},"Autos del Sur S.A.":{"2026-01":3140278,"2026-02":19995633,"2026-03":3321529,"2026-04":4158963,"2026-05":1277574,"2026-06":3252531,"2026-07":2875202,"2026-08":10714412,"2026-09":3183424,"2026-10":1497000},"Kansai S.A.":{"2026-01":2108312,"2026-02":2066750,"2026-03":2788960,"2026-04":3772623,"2026-05":6787873,"2026-06":4747976,"2026-07":6426362,"2026-08":3465482,"2026-09":3607130,"2026-10":333771},"Zento S.A.":{"2026-01":3652732,"2026-03":5050281,"2026-04":2436138,"2026-05":163935,"2026-06":78323,"2026-07":1943485,"2026-08":1782482,"2026-09":3443197,"2026-10":2289567},"SAKURA MOTORS SA":{"2026-02":3564051,"2026-03":1079533,"2026-04":2465885,"2026-06":1642062,"2026-07":1354977,"2026-10":1592938},"Nippon Car S.R.L.":{"2026-02":9087049,"2026-03":3837165,"2026-04":6737328,"2026-06":1481947,"2026-07":5383049,"2026-08":43018042,"2026-09":21575443},"Yacopini Inversora S.A.":{"2026-02":8388384,"2026-04":3340323,"2026-05":1111435,"2026-06":5119586,"2026-07":6923851,"2026-08":976990,"2026-09":8014615,"2026-10":2093845},"AUTORA SA":{"2026-02":4093633,"2026-03":2282883,"2026-08":820326,"2026-10":837967},"AUTO PRANA S.A.":{"2026-02":656842,"2026-03":1874656,"2026-04":243614,"2026-05":570382,"2026-06":4118532,"2026-07":901540,"2026-08":3171780,"2026-09":2583646,"2026-10":1164839},"Haimovich Parana S.A.":{"2026-02":7784634,"2026-04":1181366,"2026-05":1247724,"2026-06":418653,"2026-07":84939,"2026-08":976990,"2026-09":3328555},"Autolux S.A.":{"2026-02":4634129,"2026-03":3500378,"2026-04":6259403,"2026-05":2310940,"2026-06":1452782,"2026-07":5290426,"2026-08":4112911,"2026-09":6893620,"2026-10":3650904},"Del Parque S.A.":{"2026-02":644860,"2026-06":2860609,"2026-08":976990},"Audec S.A.":{"2026-02":955625,"2026-03":418653,"2026-04":1894491,"2026-05":3030784,"2026-06":768816,"2026-07":2142124,"2026-08":874550,"2026-09":4344313,"2026-10":5589797},"TOYOTA OLIVIERI":{"2026-02":253955,"2026-03":1237904,"2026-05":243614,"2026-07":488414,"2026-09":2028669,"2026-10":690581},"Amiun S.A.":{"2026-02":4495670,"2026-03":1658646,"2026-04":1182129,"2026-05":2889569,"2026-06":4305980,"2026-07":1518682,"2026-08":2350677,"2026-09":2068096,"2026-10":1847972},"Asahi Motors S.A.":{"2026-02":3652732,"2026-04":2041679,"2026-05":694138,"2026-06":1738355,"2026-08":789376,"2026-09":2955322,"2026-10":2429612},"Pichetti S.A.":{"2026-03":645738,"2026-04":136980,"2026-05":700326,"2026-06":90105,"2026-07":3791242,"2026-08":360065},"Mendez Kyoudai S.A.":{"2026-03":767345,"2026-09":976990},"TTC Auto Argentina S.A.":{"2026-03":1728098,"2026-04":418653,"2026-05":911051,"2026-06":1052184,"2026-07":2861025,"2026-08":1313310,"2026-09":655391,"2026-10":1168559},"Fecorp SRL":{"2026-03":752711,"2026-05":147491,"2026-06":442472,"2026-08":2419214,"2026-09":2429926},"Derka y Vargas S.A.":{"2026-03":3484586,"2026-04":787489,"2026-05":989137,"2026-06":1445052,"2026-07":3087537,"2026-08":9191034,"2026-09":2454217,"2026-10":2359432},"Gonzalez Gonzalez S.A.":{"2026-03":1292744,"2026-05":1979684,"2026-06":292644,"2026-07":752711},"Line Up S.A.":{"2026-03":587080,"2026-06":837306,"2026-07":2312820},"FEDERICO S.A.":{"2026-03":191127,"2026-06":4173655,"2026-07":4720774,"2026-08":548337,"2026-09":880931,"2026-10":1279397},"CELENTANO MOTORS SA":{"2026-03":2351915,"2026-05":1941603,"2026-06":511080,"2026-07":623190},"Cerrito Car S.A.":{"2026-04":1344199,"2026-08":488495,"2026-10":888518},"Mov S.A.":{"2026-04":9884751,"2026-05":4521468,"2026-06":5351077,"2026-07":336855},"Uzcudun S.A.F.I.M.":{"2026-04":487143,"2026-05":487143,"2026-06":487143,"2026-07":948036},"Catriel Mapu S.A.":{"2026-04":1532497},"Gustavo Ricciardi S.A.":{"2026-04":418653},"Centro Motor S.A.":{"2026-04":450524,"2026-05":3153671,"2026-06":1802098,"2026-07":2778926,"2026-09":3418899},"HOMU S.A.":{"2026-04":15430164},"Hector Ricardo Milanesio S.A.":{"2026-05":990560},"SENNA AUTOMOTORES S.A.":{"2026-05":2093264,"2026-06":146322,"2026-08":1953980},"GINZA S.A.":{"2026-05":554162,"2026-06":5515749,"2026-10":837967},"Sarthou Automotores S.A.":{"2026-06":9100823,"2026-07":3327829,"2026-08":1189173,"2026-09":688713},"MOVICAR AUTOMOTORES S.A.":{"2026-07":1593263,"2026-08":829675,"2026-09":4822856,"2026-10":249459},"Autosiglo S.A.":{"2026-07":99398},"Treos Norte S.A.":{"2026-09":488414,"2026-10":498918}}};
+const CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vT9542rkmDpsIrKEDzLPAKemltkqGMIHzkpsldaas9hUSOXe4pjnpGXbo2ZcW7H3oBzdMy_s6h_WNsi/pub?gid=0&single=true&output=csv';
+let DATA=SNAP.d, GEN=SNAP.gen, LIVE=false, FILT=null;
+const MN=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const ml=m=>MN[+m.slice(5)-1]+' '+m.slice(2,4);
+const g=id=>document.getElementById(id);
+const nrm=s=>s.toUpperCase().replace(/[.,]/g,' ').replace(/\b(S A F I M|S A|S R L|SA|SRL|SAFIM)\b/g,'').replace(/\s+/g,' ').trim();
+const VM={"Hernan":["Sakura Motors S.A.","TM S.A.","Amiun S.A.","Hector Ricardo Milanesio S.A.","Pichetti S.A.","Alem Sur S.A.","Centro Motor S.A.","Cerrito Car S.A.","Sarthou Automotores S.A.","Treos Norte S.A.","Nunez Autos S.A.","Asahi Motors S.A.","TTC Auto Argentina S.A.","Yacopini Inversora S.A.","Gonzalez Gonzalez S.A.","Pineyro y Moscatelli S.R.L.","Fecorp S.R.L.","Haimovich Parana S.A.","Autora S.A.","Mendez Kyoudai S.A.","Ginza S.A.","Audec S.A.","Autonort S.A.","Gustavo Ricciardi S.A.","Toyota Olivieri","Federico S.A.","Autorosario S.A."],"Matias":["Uzcudun S.A.F.I.M.","BHAS S.A.","Autosiglo S.A.","Line Up S.A.","Catriel Mapu S.A.","Tsuyoi S.A.","Derka y Vargas S.A.","Autos del Sur S.A.","Nippon Car S.R.L.","Kansai S.A.","Autolux S.A.","Mov S.A.","Senna Automotores S.A.","Bosetti Automotores S.R.L.","Zento S.A.","Del Parque S.A.","Auto Prana S.A.","HOMU S.A.","Celentano Motors S.A."]},VMN={};Object.entries(VM).forEach(([v,l])=>l.forEach(n=>VMN[nrm(n)]=v));
+function vendOf(c){const k=nrm(c);try{const x=(typeof ALL_CONCS!=='undefined'?ALL_CONCS:[]).find(a=>nrm(a.nombre)===k);if(x)return x.vendedor}catch(e){}return VMN[k]||''}
+function parseCSV(t){const R=[];let i=0,f='',r=[],q=false;while(i<t.length){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else{if(c==='"')q=true;else if(c===','){r.push(f);f=''}else if(c==='\n'){r.push(f);R.push(r);r=[];f=''}else if(c!=='\r')f+=c}i++}if(f||r.length){r.push(f);R.push(r)}return R}
+function build(t){const rows=parseCSV(t);if(rows.length<2)return null;const H=rows[0].map(x=>x.trim().toUpperCase());const ix=n=>H.indexOf(n);
+ const iN=ix('NOMBRE CONCESIONARIO'),iF=ix('FECHA ORDEN'),iI=ix('IMPORTE TOTAL DEALER'),iS=ix('STATUS DEL PEDIDO'),iID=ix('ID');if(iN<0||iF<0||iI<0)return null;
+ const seen=new Set(),d={};let mx='';
+ for(const r of rows.slice(1)){const id=iID>=0?(r[iID]||'').trim():r.join('|');if(!id||seen.has(id))continue;seen.add(id);
+  const n=(r[iN]||'').replace(/\s+/g,' ').trim();if(!n||/^[\d#]/.test(n))continue;if(iS>=0&&(r[iS]||'').trim().toUpperCase()==='PEDIDO CANCELADO')continue;
+  const m=(r[iF]||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);if(!m)continue;let y=+m[3];if(y<100)y+=2000;const k=y+'-'+String(+m[2]).padStart(2,'0');
+  const day=k+'-'+String(+m[1]).padStart(2,'0');if(day>mx)mx=day;
+  let v=(r[iI]||'').trim().replace(/\./g,'').replace(',','.');v=parseFloat(v)||0;(d[n]=d[n]||{})[k]=(d[n][k]||0)+v}
+ return Object.keys(d).length?{d,gen:new Date().toISOString().slice(0,10)}:null}
+function render(){
+ const vend=(g('filtConcVend')||{}).value||'';
+ const today=new Date(GEN+'T00:00:00'),cur=GEN.slice(0,7);
+ const ms=new Set();Object.values(DATA).forEach(o=>Object.keys(o).forEach(k=>ms.add(k)));const M=[...ms].sort();
+ const closed=M.filter(m=>m<cur), MNs=m=>MN[+m.slice(5)-1];
+ const fM=v=>v?(v/1e6).toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1}):'–';
+ let all=Object.entries(DATA).filter(([c])=>!vend||vendOf(c)===vend).map(([c,o])=>{const v=M.map(m=>o[m]||0),tot=v.reduce((a,b)=>a+b,0);
+  let la=-1;v.forEach((x,i)=>{if(x>0)la=i});const lastBuy=la<0?null:M[la];const idle=la<0?99:closed.filter(m=>m>lastBuy).length;let li=-1;v.forEach((x,i)=>{if(x>0&&M[i]<cur)li=i});const lm=li<0?null:M[li];
+  const prev=li<0?[]:M.slice(Math.max(0,li-3),li);const base=prev.length?prev.reduce((s,m)=>s+(o[m]||0),0)/prev.length:0;
+  let tr,cls,lab,tip;
+  if(li<0){tr=0;cls='st';lab='–';tip=''}
+  else if(!prev.length||base===0){tr=9;cls='up';lab='nuevo';tip=`Compró ${fM(v[li])}M en ${MNs(lm)} sin compras en los 3 meses anteriores`}
+  else{tr=v[li]/base-1;cls=tr>.2?'up':tr<-.2?'dn':'st';lab=(tr>0?'+':'')+Math.round(tr*100)+'%';tip=`${MNs(lm)}: ${fM(v[li])}M vs promedio ${prev.map(MNs).join('–')}: ${fM(base)}M`}
+  return{c,v,tot,tr,cls,lab,tip,lm,lastBuy,idle,cmp:prev.length?MNs(lm)+' vs '+prev.map(MNs).join('–'):'',last:o[closed[closed.length-1]]||0,max:Math.max(...v)}}).filter(r=>r.tot>0);
+ all.sort((x,y)=>y.tot-x.tot).forEach((r,i)=>r.rk=i+1);
+ const n=k=>all.filter(r=>r.idle<2&&r.cls===k).length,off=all.filter(r=>r.idle>=2).length,TAG={up:'tag-g',dn:'tag-o',st:''};
+ const kp=[[null,'Concesionarios',all.length,'var(--text)'],['up','Creciendo (+20%)',n('up'),'var(--green)'],['dn','Cayendo (−20%)',n('dn'),'var(--orange)'],['off','Sin compras 2+ meses',off,'var(--red)']];
+ g('tmxKpi').innerHTML=kp.map(k=>`<div class="kc ${FILT===k[0]?'on':''}" data-k="${k[0]||''}"><div class="kl">${k[1]}</div><div class="kv" style="color:${k[3]};font-size:26px">${k[2]}</div></div>`).join('');
+ g('tmxKpi').querySelectorAll('.kc').forEach(e=>e.onclick=()=>{FILT=e.dataset.k||null;render()});
+ g('tmxSub').innerHTML=`<span style="color:var(--text-3)">${M.includes(cur)?MN[+cur.slice(5)-1]+'* = mes en curso · ':''}</span><span style="color:${LIVE?'var(--green)':'var(--text-3)'}">${LIVE?'● en vivo':'datos al '+GEN.split('-').reverse().join('/')}</span>`;
+ const inF=r=>!FILT||(FILT==='off'?r.idle>=2:(r.idle<2&&r.cls===FILT));
+ const q=(g('tmxQ').value||'').toLowerCase(),so=g('tmxSort').value,sc=g('tmxScale').value;
+ let L=all.filter(r=>inF(r)&&r.c.toLowerCase().includes(q));
+ L.sort({tot:(a,b)=>b.tot-a.tot,tr:(a,b)=>b.tr-a.tr,trd:(a,b)=>a.tr-b.tr,last:(a,b)=>b.last-a.last,idle:(a,b)=>b.idle-a.idle||b.tot-a.tot,c:(a,b)=>a.c.localeCompare(b.c)}[so]);
+ const gmax=Math.max(1,...all.flatMap(r=>r.v));
+ const bg=(v,mx)=>{if(!v)return'';const t=Math.max(.06,Math.sqrt(v/mx));return `background:rgba(201,162,39,${(.1+t*.8).toFixed(2)});color:${t>.55?'#1a1300':'#F0C040'};font-weight:600`};
+ let h='<thead><tr><th class="rk">#</th><th class="n">Concesionario</th>'+M.map(m=>`<th>${ml(m)}${m===cur?'*':''}</th>`).join('')+'<th>Total</th><th>Últ. compra</th><th>Tendencia</th></tr></thead><tbody>';
+ L.forEach(r=>{h+=`<tr><td class="rk">${r.rk}</td><td class="n" title="${r.c}">${r.c}</td>`+r.v.map(v=>`<td class="${v?'':'z'}" style="${bg(v,sc==='row'?r.max:gmax)}">${fM(v)}</td>`).join('')+`<td class="tot">${fM(r.tot)}</td><td style="${r.idle>=2?'color:var(--red);font-weight:600':''}">${r.lastBuy?ml(r.lastBuy)+(r.idle>=2?' · '+r.idle+'m sin compras':''):'–'}</td><td title="${r.tip}"><span class="tag ${TAG[r.cls]}" style="${r.cls==='st'?'color:var(--text-3)':''}">${r.lab}</span> <span style="font-size:10px;color:var(--text-3)">${r.cmp}</span></td></tr>`});
+ const col=M.map((m,i)=>L.reduce((s,r)=>s+r.v[i],0));
+ h+=`</tbody><tfoot><tr><td></td><td class="n">Total (${L.length})</td>`+col.map(v=>`<td>${fM(v)}</td>`).join('')+`<td>${fM(col.reduce((a,b)=>a+b,0))}</td><td></td><td></td></tr></tfoot>`;
+ g('tmxT').innerHTML=h}
+function init(){if(!g('tmxT'))return;['tmxQ','tmxSort','tmxScale'].forEach(id=>g(id).addEventListener('input',render));
+ const fv=g('filtConcVend');if(fv)fv.addEventListener('change',render);render();
+ fetch(CSV_URL,{cache:'no-store'}).then(r=>r.ok?r.text():Promise.reject()).then(t=>{const d=build(t);if(d){DATA=d.d;GEN=d.gen;LIVE=true;render()}}).catch(()=>{});}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
 </script>
 </body>
 </html>
